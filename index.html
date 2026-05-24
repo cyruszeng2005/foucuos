@@ -275,8 +275,8 @@
                             <div class="col-span-3">
                                 <label class="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">选择同步云端服务商</label>
                                 <select id="gh-provider" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20 font-sans font-bold">
-                                    <option value="gitee">Gitee 码云 Gist (推荐: 内地极速免代理)</option>
-                                    <option value="github">GitHub Gist (国外/需网络代理工具)</option>
+                                    <option value="gitee">Gitee 码云 Gist</option>
+                                    <option value="github">GitHub Gist</option>
                                 </select>
                             </div>
                             <div class="col-span-3 md:col-span-2">
@@ -1735,8 +1735,8 @@ window.onload = function() {
     // Trigger Auto Cloud Download on startup
     autoDownloadOnLoad();
     
-    // Periodically sync check every 15 seconds in the background (Aggressive Synced Multi-Terminal check)
-    setInterval(backgroundSyncCheck, 15000);
+    // Periodically sync check every 3 seconds in the background (Aggressive Synced Multi-Terminal check)
+    setInterval(backgroundSyncCheck, 3000);
 }
 </script>
 
