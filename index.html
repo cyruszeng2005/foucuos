@@ -92,6 +92,11 @@
         .active-scale:active {
             transform: scale(0.96);
         }
+        /* Premium Tabular Numeric Layout Styles (High-end Watch & Finance style) */
+        .premium-num {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum" 1, "ss01" 1;
+        }
     </style>
 </head>
 <body class="bg-apple-light text-apple-darkText font-sans flex flex-col justify-between overflow-hidden h-[100dvh] w-full select-none">
@@ -101,7 +106,7 @@
         <div class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></div>
         <span class="text-xs font-bold tracking-wider text-zinc-500 uppercase">FocusOS Design by 曾晨阳</span>
     </div>
-    <div class="text-xs text-apple-muted font-mono font-black" id="live-clock">
+    <div class="text-xs text-apple-muted font-mono font-black premium-num" id="live-clock">
         正在同步时间...
     </div>
 </header>
@@ -135,8 +140,8 @@
 
         <!-- Google Calendar style Scrollable Timeline Container -->
         <div class="flex-1 overflow-y-auto relative bg-gradient-to-b from-white to-zinc-50/40" id="timeline-container" style="-webkit-overflow-scrolling: touch;">
-            <!-- Real Grid Height: 1248px (24 hours * 52px) -->
-            <div class="relative w-full cursor-crosshair select-none" id="timeline-grid" style="height: 1248px;">
+            <!-- Real Grid Height: 3840px (24 hours * 160px) -->
+            <div class="relative w-full cursor-crosshair select-none" id="timeline-grid" style="height: 3840px;">
                 
                 <!-- Absolute Grid Lines Container (No overlapping or layout shift errors) -->
                 <div class="absolute inset-0 pointer-events-none" id="grid-lines">
@@ -149,7 +154,7 @@
                         <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
                         <span id="drag-preview-title" class="text-[11px] font-bold text-blue-600 font-sans">框选创建日程...</span>
                     </div>
-                    <span id="drag-preview-time" class="text-xs font-mono font-black text-blue-500">00:00 - 00:00</span>
+                    <span id="drag-preview-time" class="text-xs font-mono font-black text-blue-500 premium-num">00:00 - 00:00</span>
                 </div>
                 
                 <!-- Active events overlay (Pointer events none, allowing clicks to pass to grid) -->
@@ -175,16 +180,16 @@
             <div class="flex flex-col items-center justify-center py-4 text-center flex-shrink-0">
                 <span class="text-[10px] tracking-widest text-apple-muted font-bold uppercase mb-1">TOTAL INTEGRAL · 当前累计积分</span>
                 <div class="flex items-baseline space-x-1.5">
-                    <span class="text-5xl md:text-6xl font-black tracking-tight text-apple-darkText font-sans transition-all duration-300 ease-out" id="points-display">
+                    <span class="text-5xl md:text-6xl font-black tracking-tight text-apple-darkText font-sans transition-all duration-300 ease-out premium-num" id="points-display">
                         0
                     </span>
                     <span class="text-xs font-black text-zinc-400 font-mono">PTS</span>
                 </div>
                 <!-- Dynamic per-day statistics linked with calendar's selected day -->
                 <div class="mt-3 flex items-center space-x-4 text-xs text-zinc-500 font-bold">
-                    <span id="points-earned-day" class="flex items-center"><i class="fa-solid fa-arrow-trend-up text-emerald-500 mr-1.5"></i>今日获得: +0</span>
+                    <span id="points-earned-day" class="flex items-center premium-num"><i class="fa-solid fa-arrow-trend-up text-emerald-500 mr-1.5"></i>今日获得: +0</span>
                     <span class="w-1 h-1 rounded-full bg-zinc-300"></span>
-                    <span id="points-spent-day" class="flex items-center"><i class="fa-solid fa-arrow-trend-down text-rose-500 mr-1.5"></i>今日消耗: -0</span>
+                    <span id="points-spent-day" class="flex items-center premium-num"><i class="fa-solid fa-arrow-trend-down text-rose-500 mr-1.5"></i>今日消耗: -0</span>
                 </div>
             </div>
 
@@ -197,15 +202,15 @@
                         <div class="p-2 bg-blue-50 rounded-xl text-blue-600">
                             <i class="fa-solid fa-graduation-cap text-base"></i>
                         </div>
-                        <span class="text-[9px] md:text-[10px] font-mono font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                            +1 分/分
+                        <span class="text-[9px] md:text-[10px] font-mono font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md premium-num">
+                            +3 分/分
                         </span>
                     </div>
                     
                     <div class="mt-4 z-10">
                         <h4 class="text-xs md:text-sm font-black text-zinc-800">学习</h4>
                         <p class="text-[11px] text-apple-muted mt-0.5" id="timer-study-desc">待开启</p>
-                        <div class="text-xl md:text-2xl font-mono font-black text-blue-600 mt-1 hidden" id="timer-study-display">00:00</div>
+                        <div class="text-xl md:text-2xl font-mono font-black text-blue-600 mt-1 hidden premium-num" id="timer-study-display">00:00</div>
                     </div>
 
                     <button id="btn-study" onclick="toggleTracker('study')" class="mt-3.5 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs md:text-sm font-black transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 active-scale">
@@ -221,20 +226,20 @@
                         <div class="p-2 bg-rose-50 rounded-xl text-rose-600">
                             <i class="fa-solid fa-gamepad text-base"></i>
                         </div>
-                        <span class="text-[9px] md:text-[10px] font-mono font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">
-                            -5 分/分
+                        <span class="text-[9px] md:text-[10px] font-mono font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md premium-num">
+                            -15 分/分
                         </span>
                     </div>
                     
                     <div class="mt-4 z-10">
-                        <h4 class="text-xs md:text-sm font-black text-zinc-800">玩</h4>
+                        <h4 class="text-xs md:text-sm font-black text-zinc-800">娱乐</h4>
                         <p class="text-[11px] text-apple-muted mt-0.5" id="timer-play-desc">待开启</p>
-                        <div class="text-xl md:text-2xl font-mono font-black text-rose-600 mt-1 hidden" id="timer-play-display">00:00</div>
+                        <div class="text-xl md:text-2xl font-mono font-black text-rose-600 mt-1 hidden premium-num" id="timer-play-display">00:00</div>
                     </div>
 
                     <button id="btn-play" onclick="toggleTracker('play')" class="mt-3.5 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs md:text-sm font-black transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 active-scale">
                         <i class="fa-solid fa-play text-[10px]"></i>
-                        <span>开始玩</span>
+                        <span>开始娱乐</span>
                     </button>
                 </div>
             </div>
@@ -349,13 +354,13 @@
                         <input type="radio" name="type-color" value="blue" checked class="absolute top-2 right-2 accent-blue-500 w-4 h-4" onclick="toggleCustomPointsField(false)">
                         <span class="w-4 h-4 rounded-full bg-blue-500 mb-1"></span>
                         <span class="text-[11px] font-black text-blue-600">蓝色</span>
-                        <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">+1 分/分</span>
+                        <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">+3 分/分</span>
                     </label>
                     <label class="flex flex-col items-center justify-center p-3 border border-apple-border rounded-xl cursor-pointer hover:bg-zinc-50 transition-all duration-150 relative">
                         <input type="radio" name="type-color" value="red" class="absolute top-2 right-2 accent-rose-500 w-4 h-4" onclick="toggleCustomPointsField(false)">
                         <span class="w-4 h-4 rounded-full bg-rose-500 mb-1"></span>
                         <span class="text-[11px] font-black text-rose-600">红色</span>
-                        <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">-5 分/分</span>
+                        <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">-15 分/分</span>
                     </label>
                     <label class="flex flex-col items-center justify-center p-3 border border-apple-border rounded-xl cursor-pointer hover:bg-zinc-50 transition-all duration-150 relative">
                         <input type="radio" name="type-color" value="green" class="absolute top-2 right-2 accent-emerald-500 w-4 h-4" onclick="toggleCustomPointsField(true)">
@@ -751,7 +756,7 @@ async function autoDownloadOnLoad() {
     }
 }
 
-// Smart Sync Check: Checks for changes in the cloud every 30 seconds
+// Smart Sync Check: Checks for changes in the cloud every 15 seconds (optimized)
 async function backgroundSyncCheck() {
     // Only fetch if tab is active, has config, and user is not actively typing or running a local tracker
     if (document.visibilityState !== 'visible' || !syncConfig.token || !syncConfig.gistId) return;
@@ -1002,7 +1007,7 @@ function updateCurrentTimeIndicator() {
         const hours = now.getHours();
         const minutes = now.getMinutes();
         const totalHours = hours + (minutes / 60);
-        const topPx = totalHours * 52;
+        const topPx = totalHours * 160; // Scaling matched to new 160px grid scale
 
         indicator.style.top = `${topPx}px`;
         indicator.classList.remove('hidden');
@@ -1020,13 +1025,13 @@ function renderTimelineGrid() {
         const timeStr = `${String(i).padStart(2, '0')}:00`;
         const lineDiv = document.createElement('div');
         
-        // Exact height block placed at precise coordinate intervals
+        // Exact height block placed at precise coordinate intervals (Now 160px for high definition & readable compact events)
         lineDiv.className = "absolute left-0 right-0 border-b border-zinc-100 flex items-center pointer-events-none";
-        lineDiv.style.top = `${i * 52}px`;
-        lineDiv.style.height = `52px`;
+        lineDiv.style.top = `${i * 160}px`;
+        lineDiv.style.height = `160px`;
         
         lineDiv.innerHTML = `
-            <span class="absolute left-0 text-sm font-black text-zinc-600 select-none font-mono -translate-y-6">${timeStr}</span>
+            <span class="absolute left-0 text-sm font-black text-zinc-600 select-none font-mono -translate-y-6 premium-num">${timeStr}</span>
             <div class="ml-16 w-full h-[1px] bg-zinc-200/50"></div>
         `;
         gridLines.appendChild(lineDiv);
@@ -1039,7 +1044,7 @@ function timeToPixels(timeStr) {
     const hours = parseInt(parts[0], 10);
     const minutes = parseInt(parts[1], 10);
     const totalHours = hours + (minutes / 60);
-    return totalHours * 52;
+    return totalHours * 160; // Scaled perfectly to 160px
 }
 
 // Interactive Scheduler drag and tap controller (Completely unifies desktop and mobile)
@@ -1055,7 +1060,7 @@ function initInteractiveScheduleEngine() {
         if (clickX < 64) return; // Ignore dragging on the left label track
 
         const y = e.clientY - rect.top;
-        const hourDecimal = y / 52;
+        const hourDecimal = y / 160; // 160px scale mapping
         
         dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
         dragEndHour = dragStartHour;
@@ -1071,7 +1076,7 @@ function initInteractiveScheduleEngine() {
         if (!isDragging) return;
         const rect = grid.getBoundingClientRect();
         const y = e.clientY - rect.top;
-        const hourDecimal = y / 52;
+        const hourDecimal = y / 160; // 160px scale mapping
         
         dragEndHour = Math.max(0, Math.min(24, Math.round(hourDecimal * 4) / 4));
         updateDragPreview();
@@ -1103,7 +1108,7 @@ function initInteractiveScheduleEngine() {
         // If touching on the grid area, lock scrolling and start drawing!
         e.preventDefault(); 
         const y = touch.clientY - rect.top;
-        const hourDecimal = y / 52;
+        const hourDecimal = y / 160; // 160px scale mapping
 
         dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
         dragEndHour = dragStartHour;
@@ -1119,7 +1124,7 @@ function initInteractiveScheduleEngine() {
         const touch = e.touches[0];
         const rect = grid.getBoundingClientRect();
         const y = touch.clientY - rect.top;
-        const hourDecimal = y / 52;
+        const hourDecimal = y / 160; // 160px scale mapping
 
         dragEndHour = Math.max(0, Math.min(24, Math.round(hourDecimal * 4) / 4));
         updateDragPreview();
@@ -1139,8 +1144,8 @@ function updateDragPreview() {
     let start = Math.min(dragStartHour, dragEndHour);
     let end = Math.max(dragStartHour, dragEndHour);
     
-    const topPx = start * 52;
-    const heightPx = Math.max((end - start) * 52, 12);
+    const topPx = start * 160;
+    const heightPx = Math.max((end - start) * 160, 12);
     
     preview.style.top = `${topPx}px`;
     preview.style.height = `${heightPx}px`;
@@ -1245,7 +1250,7 @@ function saveSchedule(event) {
     triggerAutoUpload();
 }
 
-// Event block renderer
+// Event block renderer with intelligent 15-minute compact visual modes
 function renderEvents() {
     const container = document.getElementById('events-overlay');
     container.innerHTML = '';
@@ -1256,50 +1261,84 @@ function renderEvents() {
     list.forEach(evt => {
         const topPx = timeToPixels(evt.start);
         const endPx = timeToPixels(evt.end);
-        const heightPx = Math.max(endPx - topPx, 52); // Ensure touchable target height
+        
+        // 15 mins is 40px, enforce 40px min height to retain premium tap targets
+        const heightPx = Math.max(endPx - topPx, 40); 
+        const durationMins = getDurationMinutes(evt.start, evt.end);
+        const isShort = durationMins <= 15 || heightPx <= 45; // Triggers streamlined single-line layout
 
         const card = document.createElement('div');
         
-        // pointer-events-auto intercepts clicks correctly while allowing backdrop to bypass
-        card.className = `absolute left-2 right-2 rounded-xl p-3 border shadow-sm transition-all duration-300 flex flex-col justify-between overflow-hidden group pointer-events-auto ${
-            evt.completed 
-            ? 'opacity-55 bg-zinc-100 border-zinc-200 line-through text-zinc-400 shadow-none' 
-            : getEventThemeClasses(evt.color)
-        }`;
+        // Apply responsive visual layout tokens dynamically based on event duration
+        if (isShort) {
+            card.className = `absolute left-2 right-2 rounded-xl px-2 py-1 border shadow-sm transition-all duration-300 flex items-center justify-between overflow-hidden group pointer-events-auto ${
+                evt.completed 
+                ? 'opacity-55 bg-zinc-100 border-zinc-200 line-through text-zinc-400 shadow-none' 
+                : getEventThemeClasses(evt.color)
+            }`;
+        } else {
+            card.className = `absolute left-2 right-2 rounded-xl p-3 border shadow-sm transition-all duration-300 flex flex-col justify-between overflow-hidden group pointer-events-auto ${
+                evt.completed 
+                ? 'opacity-55 bg-zinc-100 border-zinc-200 line-through text-zinc-400 shadow-none' 
+                : getEventThemeClasses(evt.color)
+            }`;
+        }
         
         card.style.top = `${topPx}px`;
         card.style.height = `${heightPx}px`;
 
         const mins = getDurationMinutes(evt.start, evt.end);
         let ptsHelper = "";
-        if (evt.color === 'blue') ptsHelper = `+${mins} PTS`;
-        else if (evt.color === 'red') ptsHelper = `-${mins * 5} PTS`;
+        if (evt.color === 'blue') ptsHelper = `+${mins * 3} PTS`;
+        else if (evt.color === 'red') ptsHelper = `-${mins * 15} PTS`;
         else ptsHelper = `${evt.customPoints >= 0 ? '+' : ''}${evt.customPoints} PTS`;
 
-        card.innerHTML = `
-            <div class="flex items-start justify-between w-full h-full">
-                <!-- Left Section (checkbox & title) -->
-                <div class="flex items-start space-x-3 overflow-hidden h-full">
-                    <div class="flex items-center justify-center p-1">
-                        <input type="checkbox" ${evt.completed ? 'checked' : ''} onclick="toggleEventCompletion('${evt.id}', event)" class="w-5 h-5 rounded border-zinc-300 text-blue-600 focus:ring-0 cursor-pointer accent-blue-600 active-scale">
+        if (isShort) {
+            // High-density space-saving single-line layout
+            card.innerHTML = `
+                <div class="flex items-center justify-between w-full h-full text-[11px] leading-none premium-num font-sans font-bold">
+                    <div class="flex items-center space-x-2 truncate">
+                        <input type="checkbox" ${evt.completed ? 'checked' : ''} onclick="toggleEventCompletion('${evt.id}', event)" class="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-0 cursor-pointer accent-blue-600 active-scale">
+                        <span class="truncate ${evt.completed ? 'text-zinc-400' : 'text-zinc-800'}">${evt.title}</span>
+                        <span class="text-[9px] text-zinc-500 font-mono">${evt.start}-${evt.end}</span>
                     </div>
-                    <div class="flex flex-col overflow-hidden font-bold">
-                        <span class="text-xs md:text-sm font-black truncate ${evt.completed ? 'text-zinc-400' : 'text-zinc-800'}">${evt.title}</span>
-                        <span class="text-[11px] font-mono font-black text-zinc-600/90 mt-0.5">${evt.start} - ${evt.end} (${mins}分)</span>
+                    <div class="flex items-center space-x-2 flex-shrink-0">
+                        <span class="text-[9px] font-mono font-black px-1.5 py-0.5 rounded ${evt.completed ? 'bg-zinc-200 text-zinc-400' : getBadgeThemeClasses(evt.color)}">
+                            ${ptsHelper}
+                        </span>
+                        <button onclick="deleteEvent('${evt.id}', event)" class="opacity-100 md:opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-500 text-xs p-0.5 transition-opacity duration-150 active-scale">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
                     </div>
                 </div>
-                
-                <!-- Right Section (Value badge & Delete icon) -->
-                <div class="flex flex-col items-end justify-between h-full min-w-[70px]">
-                    <span class="text-[10px] font-mono font-black px-1.5 py-0.5 rounded ${evt.completed ? 'bg-zinc-200 text-zinc-400' : getBadgeThemeClasses(evt.color)}">
-                        ${ptsHelper}
-                    </span>
-                    <button onclick="deleteEvent('${evt.id}', event)" class="opacity-100 md:opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-500 text-sm p-1 transition-opacity duration-150 active-scale">
-                        <i class="fa-regular fa-trash-can"></i>
-                    </button>
+            `;
+        } else {
+            // Regular layout with multiple lines & dynamic trash controls
+            card.innerHTML = `
+                <div class="flex items-start justify-between w-full h-full">
+                    <!-- Left Section (checkbox & title) -->
+                    <div class="flex items-start space-x-3 overflow-hidden h-full">
+                        <div class="flex items-center justify-center p-1">
+                            <input type="checkbox" ${evt.completed ? 'checked' : ''} onclick="toggleEventCompletion('${evt.id}', event)" class="w-5 h-5 rounded border-zinc-300 text-blue-600 focus:ring-0 cursor-pointer accent-blue-600 active-scale">
+                        </div>
+                        <div class="flex flex-col overflow-hidden font-bold">
+                            <span class="text-xs md:text-sm font-black truncate ${evt.completed ? 'text-zinc-400' : 'text-zinc-800'}">${evt.title}</span>
+                            <span class="text-[11px] font-mono font-black text-zinc-600/90 mt-0.5 premium-num">${evt.start} - ${evt.end} (${mins}分)</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Section (Value badge & Delete icon) -->
+                    <div class="flex flex-col items-end justify-between h-full min-w-[70px]">
+                        <span class="text-[10px] font-mono font-black px-1.5 py-0.5 rounded premium-num ${evt.completed ? 'bg-zinc-200 text-zinc-400' : getBadgeThemeClasses(evt.color)}">
+                            ${ptsHelper}
+                        </span>
+                        <button onclick="deleteEvent('${evt.id}', event)" class="opacity-100 md:opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-500 text-sm p-1 transition-opacity duration-150 active-scale">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
         container.appendChild(card);
     });
 }
@@ -1330,7 +1369,7 @@ function getDurationMinutes(start, end) {
     return Math.max(endMins - startMins, 0);
 }
 
-// Complete and settle points
+// Complete and settle points with upgraded multipliers (+3/-15)
 function toggleEventCompletion(id, event) {
     event.stopPropagation();
     const dateKey = getYYYYMMDD(state.selectedDate);
@@ -1345,9 +1384,9 @@ function toggleEventCompletion(id, event) {
     let scoreDelta = 0;
 
     if (evt.color === 'blue') {
-        scoreDelta = durationMins * 1; 
+        scoreDelta = durationMins * 3; // +3 points/min
     } else if (evt.color === 'red') {
-        scoreDelta = durationMins * -5; 
+        scoreDelta = durationMins * -15; // -15 points/min
     } else if (evt.color === 'green') {
         scoreDelta = evt.customPoints; 
     }
@@ -1361,7 +1400,7 @@ function toggleEventCompletion(id, event) {
             showToast('成就解锁', `结算成功，增加积分 +${scoreDelta}`, 'success');
         } else {
             dayStats.spent += scoreDelta;
-            showToast('放空完结', `消费成功，扣除积分 ${scoreDelta}`, 'warning');
+            showToast('放松完结', `消费成功，扣除积分 ${scoreDelta}`, 'warning');
         }
     } else {
         state.points -= scoreDelta;
@@ -1393,8 +1432,8 @@ function deleteEvent(id, event) {
     if (evt.completed) {
         const durationMins = getDurationMinutes(evt.start, evt.end);
         let scoreDelta = 0;
-        if (evt.color === 'blue') scoreDelta = durationMins * 1;
-        else if (evt.color === 'red') scoreDelta = durationMins * -5;
+        if (evt.color === 'blue') scoreDelta = durationMins * 3;
+        else if (evt.color === 'red') scoreDelta = durationMins * -15;
         else if (evt.color === 'green') scoreDelta = evt.customPoints;
 
         const dayStats = getDayStatsObj(dateKey);
@@ -1440,15 +1479,15 @@ function updateActiveTrackerUI() {
         timerDisplay.innerText = `${displayMin}:${displaySec}`;
     }
 
-    // Apply point calculations live using absolute delta formula
+    // Apply point calculations live using absolute delta formula (Updated study=3, play=15)
     const dayStats = getDayStatsObj(tracker.dateKey);
     let delta = 0;
     
     if (type === 'study') {
-        delta = elapsedSeconds * (1 / 60);
+        delta = elapsedSeconds * (3 / 60); // 3 points per minute
         dayStats.earned = tracker.earnedAtStart + delta;
     } else {
-        delta = elapsedSeconds * (-5 / 60);
+        delta = elapsedSeconds * (-15 / 60); // -15 points per minute
         dayStats.spent = tracker.spentAtStart + delta;
     }
     
@@ -1520,9 +1559,9 @@ function stopActiveTracker() {
     const finalMins = Math.round(elapsedSeconds / 60);
     let totalImpact = 0;
     if (type === 'study') {
-        totalImpact = Math.round(elapsedSeconds / 60 * 1);
+        totalImpact = Math.round(elapsedSeconds / 60 * 3); // 3 PTS/min
     } else {
-        totalImpact = Math.round(elapsedSeconds / 60 * -5);
+        totalImpact = Math.round(elapsedSeconds / 60 * -15); // -15 PTS/min
     }
 
     // Restore clean iOS elements
@@ -1533,7 +1572,7 @@ function stopActiveTracker() {
     document.getElementById(`timer-${type}-desc`).innerText = "待开启计时";
 
     const btn = document.getElementById(`btn-${type}`);
-    btn.innerHTML = `<i class="fa-solid fa-play text-[10px]"></i> <span>开始${type === 'study' ? '学习' : '玩'}</span>`;
+    btn.innerHTML = `<i class="fa-solid fa-play text-[10px]"></i> <span>开始${type === 'study' ? '学习' : '娱乐'}</span>`;
     btn.className = "mt-3.5 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs md:text-sm font-black transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 active-scale";
 
     // Decommission current tracker
@@ -1624,8 +1663,8 @@ window.onload = function() {
     // Trigger Auto Cloud Download on startup
     autoDownloadOnLoad();
     
-    // Periodically sync check every 30 seconds in the background
-    setInterval(backgroundSyncCheck, 30000);
+    // Periodically sync check every 15 seconds in the background (Aggressive Synced Multi-Terminal check)
+    setInterval(backgroundSyncCheck, 15000);
 }
 </script>
 
