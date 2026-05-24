@@ -1087,24 +1087,38 @@ function updateCurrentTimeIndicator() {
 }
 
 // Exact alignment grid generator (Absolute positioning prevents offsets)
+// Updates: Positioned time labels perfectly inline with hour coordinate starts.
+// Hour line: Solid bg-zinc-300
+// 30-min line: Added border-dashed border-zinc-200/80 (lighter) at the middle of each hour block
 function renderTimelineGrid() {
     const gridLines = document.getElementById('grid-lines');
     gridLines.innerHTML = '';
     
     for (let i = 0; i < 24; i++) {
         const timeStr = `${String(i).padStart(2, '0')}:00`;
-        const lineDiv = document.createElement('div');
         
-        // Exact height block placed at precise coordinate intervals (160px for high definition & readable compact events)
-        lineDiv.className = "absolute left-0 right-0 border-b border-zinc-100 flex items-center pointer-events-none";
+        // 1. Main Hour line
+        const lineDiv = document.createElement('div');
+        lineDiv.className = "absolute left-0 right-0 flex items-center pointer-events-none";
         lineDiv.style.top = `${i * 160}px`;
-        lineDiv.style.height = `160px`;
+        lineDiv.style.height = `1px`;
         
         lineDiv.innerHTML = `
-            <span class="absolute left-0 text-sm font-black text-zinc-600 select-none font-mono -translate-y-6 premium-num">${timeStr}</span>
-            <div class="ml-16 w-full h-[1px] bg-zinc-200/50"></div>
+            <span class="absolute left-2 text-xs font-bold text-zinc-500 select-none font-mono -translate-y-1/2 premium-num">${timeStr}</span>
+            <div class="ml-16 w-full h-[1px] bg-zinc-300"></div>
         `;
         gridLines.appendChild(lineDiv);
+
+        // 2. 30-minute dashed schematic line (Lighter color & dashed style)
+        const halfLineDiv = document.createElement('div');
+        halfLineDiv.className = "absolute left-0 right-0 flex items-center pointer-events-none";
+        halfLineDiv.style.top = `${(i * 160) + 80}px`;
+        halfLineDiv.style.height = `1px`;
+        
+        halfLineDiv.innerHTML = `
+            <div class="ml-16 w-full h-0 border-t border-dashed border-zinc-200/85"></div>
+        `;
+        gridLines.appendChild(halfLineDiv);
     }
 }
 
