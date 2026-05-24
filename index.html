@@ -362,9 +362,13 @@ let state = {
     points: 0,                // Global persistent lifetime cumulative score
     dailyStats: {},          // Indexed by 'YYYY-MM-DD' -> { earned: 0, spent: 0 }
     schedules: {},           // Indexed by Date string 'YYYY-MM-DD'
-    trackers: {
-        study: { active: false, startTime: null, timerId: null, secondsElapsed: 0 },
-        play: { active: false, startTime: null, timerId: null, secondsElapsed: 0 }
+    activeTracker: {          // Persisted active tracker to survive tab sleep/refresh
+        type: null,
+        startTime: null,
+        pointsAtStart: null,
+        earnedAtStart: null,
+        spentAtStart: null,
+        dateKey: null
     },
     memo: "",
     activeMobileTab: 'calendar' // 'calendar' | 'focus' | 'memo'
@@ -405,7 +409,8 @@ function saveStateToLocalStorage() {
         points: state.points,
         dailyStats: state.dailyStats,
         schedules: state.schedules,
-        memo: state.memo
+        memo: state.memo,
+        activeTracker: state.activeTracker
     }));
 }
 
@@ -418,6 +423,7 @@ function loadStateFromLocalStorage() {
             state.dailyStats = parsed.dailyStats || {};
             state.schedules = parsed.schedules || {};
             state.memo = parsed.memo || "";
+            state.activeTracker = parsed.activeTracker || { type: null, startTime: null, pointsAtStart: null, earnedAtStart: null, spentAtStart: null, dateKey: null };
         } catch (e) {
             console.error("Local Storage restoration corrupted, bypassing safely.", e);
         }
@@ -1020,90 +1026,169 @@ function deleteEvent(id, event) {
     showToast('日程撤销', '事项已成功从计划表移除', 'info');
 }
 
-// Stopwatch triggers
-function toggleTracker(type) {
-    const isRunning = state.trackers[type].active;
-    const todayStr = getYYYYMMDD(new Date()); 
+// Stopwatch logic: Time-Delta calculations to handle screen lock & sleep seamlessly
+let trackerInterval = null;
+
+function startTrackerInterval() {
+    if (trackerInterval) clearInterval(trackerInterval);
+    trackerInterval = setInterval(() => {
+        updateActiveTrackerUI();
+    }, 200); // Super-responsive tick rate
+}
+
+function updateActiveTrackerUI() {
+    const tracker = state.activeTracker;
+    if (!tracker || !tracker.type) return;
+
+    const type = tracker.type;
+    // High Precision Time-Delta: Uses system epoch rather than standard setInterval count
+    const elapsedSeconds = Math.floor((Date.now() - tracker.startTime) / 1000);
     
-    if (!isRunning) {
-        const otherType = type === 'study' ? 'play' : 'study';
-        if (state.trackers[otherType].active) {
-            toggleTracker(otherType); 
-        }
+    // Dynamic timer text update
+    const displayMin = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
+    const displaySec = String(elapsedSeconds % 60).padStart(2, '0');
+    const timerDisplay = document.getElementById(`timer-${type}-display`);
+    if (timerDisplay) {
+        timerDisplay.innerText = `${displayMin}:${displaySec}`;
+    }
 
-        state.trackers[type].active = true;
-        state.trackers[type].startTime = Date.now();
-        state.trackers[type].secondsElapsed = 0;
-        
-        document.getElementById(`pulse-${type}`).classList.remove('opacity-0');
-        document.getElementById(`pulse-${type}`).classList.add('opacity-100');
-        document.getElementById(`card-${type}`).classList.add(type === 'study' ? 'border-blue-400' : 'border-rose-400');
-        document.getElementById(`timer-${type}-display`).classList.remove('hidden');
-        document.getElementById(`timer-${type}-desc`).innerText = "全力进行中...";
-        
-        const btn = document.getElementById(`btn-${type}`);
-        btn.innerHTML = `<i class="fa-solid fa-stop text-[10px]"></i> <span>停止计时</span>`;
-        btn.className = "mt-3.5 w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs md:text-sm font-black transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 shadow-sm active-scale";
-
-        state.trackers[type].timerId = setInterval(() => {
-            state.trackers[type].secondsElapsed++;
-            const s = state.trackers[type].secondsElapsed;
-            
-            const displayMin = String(Math.floor(s / 60)).padStart(2, '0');
-            const displaySec = String(s % 60).padStart(2, '0');
-            document.getElementById(`timer-${type}-display`).innerText = `${displayMin}:${displaySec}`;
-            
-            const dayStats = getDayStatsObj(todayStr);
-
-            if (type === 'study') {
-                const add = 1 / 60;
-                state.points += add;
-                dayStats.earned += add;
-            } else {
-                const sub = -5 / 60;
-                state.points += sub;
-                dayStats.spent += sub;
-            }
-            updatePointsUI();
-        }, 1000);
-
-        showToast(type === 'study' ? '专注通道已开启' : '娱乐放松中', '系统已为您接入实时积分统计。', 'success');
+    // Apply point calculations live using absolute delta formula
+    const dayStats = getDayStatsObj(tracker.dateKey);
+    let delta = 0;
+    
+    if (type === 'study') {
+        delta = elapsedSeconds * (1 / 60);
+        dayStats.earned = tracker.earnedAtStart + delta;
     } else {
-        clearInterval(state.trackers[type].timerId);
-        
-        const finalSecs = state.trackers[type].secondsElapsed;
-        const finalMins = Math.round(finalSecs / 60);
-        let totalImpact = 0;
-        if (type === 'study') {
-            totalImpact = Math.round(finalSecs / 60 * 1);
+        delta = elapsedSeconds * (-5 / 60);
+        dayStats.spent = tracker.spentAtStart + delta;
+    }
+    
+    state.points = tracker.pointsAtStart + delta;
+    
+    // Render updated status real-time
+    updatePointsUI();
+}
+
+function toggleTracker(type) {
+    if (state.activeTracker && state.activeTracker.type) {
+        const activeType = state.activeTracker.type;
+        if (activeType === type) {
+            // If clicked the running one, stop it
+            stopActiveTracker();
         } else {
-            totalImpact = Math.round(finalSecs / 60 * -5);
+            // If clicked the other one, swap them seamlessly
+            stopActiveTracker();
+            startTracker(type);
         }
-
-        state.trackers[type].active = false;
-        state.trackers[type].timerId = null;
-        state.trackers[type].secondsElapsed = 0;
-
-        document.getElementById(`pulse-${type}`).classList.remove('opacity-100');
-        document.getElementById(`pulse-${type}`).classList.add('opacity-0');
-        document.getElementById(`card-${type}`).classList.remove('border-blue-400', 'border-rose-400');
-        document.getElementById(`timer-${type}-display`).classList.add('hidden');
-        document.getElementById(`timer-${type}-desc`).innerText = "待开启计时";
-
-        const btn = document.getElementById(`btn-${type}`);
-        btn.innerHTML = `<i class="fa-solid fa-play text-[10px]"></i> <span>开始${type === 'study' ? '学习' : '放松'}</span>`;
-        btn.className = "mt-3.5 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs md:text-sm font-black transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 active-scale";
-
-        saveStateToLocalStorage();
-        updatePointsUI();
-
-        showToast(
-            '计时里程已保存', 
-            `本次持续了 ${finalMins} 分钟。数值波动：${totalImpact >= 0 ? '+' : ''}${totalImpact} PTS`, 
-            type === 'study' ? 'success' : 'warning'
-        );
+    } else {
+        // Nothing is running, standard boot up
+        startTracker(type);
     }
 }
+
+function startTracker(type) {
+    const todayStr = getYYYYMMDD(new Date());
+    const dayStats = getDayStatsObj(todayStr);
+
+    // Snapshot current stats to establish absolute starting point
+    state.activeTracker = {
+        type: type,
+        startTime: Date.now(),
+        pointsAtStart: state.points,
+        earnedAtStart: dayStats.earned,
+        spentAtStart: dayStats.spent,
+        dateKey: todayStr
+    };
+
+    // Activate styling and breathing pulse classes
+    document.getElementById(`pulse-${type}`).classList.remove('opacity-0');
+    document.getElementById(`pulse-${type}`).classList.add('opacity-100');
+    document.getElementById(`card-${type}`).classList.add(type === 'study' ? 'border-blue-400' : 'border-rose-400');
+    document.getElementById(`timer-${type}-display`).classList.remove('hidden');
+    document.getElementById(`timer-${type}-desc`).innerText = "全力进行中...";
+    
+    const btn = document.getElementById(`btn-${type}`);
+    btn.innerHTML = `<i class="fa-solid fa-stop text-[10px]"></i> <span>停止计时</span>`;
+    btn.className = "mt-3.5 w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs md:text-sm font-black transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 shadow-sm active-scale";
+
+    startTrackerInterval();
+    saveStateToLocalStorage();
+    
+    showToast(type === 'study' ? '专注通道已开启' : '娱乐放松中', '已为您配置息屏高精后台同步。', 'success');
+}
+
+function stopActiveTracker() {
+    const tracker = state.activeTracker;
+    if (!tracker || !tracker.type) return;
+
+    const type = tracker.type;
+    clearInterval(trackerInterval);
+
+    // Complete final accurate render calculation to prevent precision loss
+    updateActiveTrackerUI();
+
+    const elapsedSeconds = Math.floor((Date.now() - tracker.startTime) / 1000);
+    const finalMins = Math.round(elapsedSeconds / 60);
+    let totalImpact = 0;
+    if (type === 'study') {
+        totalImpact = Math.round(elapsedSeconds / 60 * 1);
+    } else {
+        totalImpact = Math.round(elapsedSeconds / 60 * -5);
+    }
+
+    // Restore clean iOS elements
+    document.getElementById(`pulse-${type}`).classList.remove('opacity-100');
+    document.getElementById(`pulse-${type}`).classList.add('opacity-0');
+    document.getElementById(`card-${type}`).classList.remove('border-blue-400', 'border-rose-400');
+    document.getElementById(`timer-${type}-display`).classList.add('hidden');
+    document.getElementById(`timer-${type}-desc`).innerText = "待开启计时";
+
+    const btn = document.getElementById(`btn-${type}`);
+    btn.innerHTML = `<i class="fa-solid fa-play text-[10px]"></i> <span>开始${type === 'study' ? '学习' : '放松'}</span>`;
+    btn.className = "mt-3.5 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs md:text-sm font-black transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 active-scale";
+
+    // Decommission current tracker
+    state.activeTracker = { type: null, startTime: null, pointsAtStart: null, earnedAtStart: null, spentAtStart: null, dateKey: null };
+
+    saveStateToLocalStorage();
+    updatePointsUI();
+
+    showToast(
+        '计时里程已保存', 
+        `本次持续了 ${finalMins} 分钟。数值波动：${totalImpact >= 0 ? '+' : ''}${totalImpact} PTS`, 
+        type === 'study' ? 'success' : 'warning'
+    );
+}
+
+function resumeActiveTracker() {
+    const tracker = state.activeTracker;
+    if (!tracker || !tracker.type) return;
+
+    const type = tracker.type;
+
+    // Restore active UI styles
+    document.getElementById(`pulse-${type}`).classList.remove('opacity-0');
+    document.getElementById(`pulse-${type}`).classList.add('opacity-100');
+    document.getElementById(`card-${type}`).classList.add(type === 'study' ? 'border-blue-400' : 'border-rose-400');
+    document.getElementById(`timer-${type}-display`).classList.remove('hidden');
+    document.getElementById(`timer-${type}-desc`).innerText = "全力进行中...";
+    
+    const btn = document.getElementById(`btn-${type}`);
+    btn.innerHTML = `<i class="fa-solid fa-stop text-[10px]"></i> <span>停止计时</span>`;
+    btn.className = "mt-3.5 w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs md:text-sm font-black transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 shadow-sm active-scale";
+
+    startTrackerInterval();
+}
+
+// Instantly catch up on background wake-up or tab activation
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        if (state.activeTracker && state.activeTracker.type) {
+            updateActiveTrackerUI();
+        }
+    }
+});
 
 // Slate Autosave
 function initMemoController() {
@@ -1131,6 +1216,7 @@ window.onload = function() {
     selectNewDate(new Date()); 
     initInteractiveScheduleEngine();
     initMemoController();
+    resumeActiveTracker(); // Seamless restoration of active sessions
     
     // Refresh display
     updateLayoutForTabs();
