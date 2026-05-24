@@ -431,6 +431,26 @@ let dragEndHour = null;
 let autoUploadTimeout = null;
 let lastSyncTimestamp = 0; // Tracks when we last synced to avoid redundant downloads
 
+// High-performance Fetch wrapper with timeout limit to avoid browser hanging
+async function fetchWithTimeout(resource, options = {}) {
+    const { timeout = 5000 } = options; // 5 seconds default timeout
+    
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+        const response = await fetch(resource, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        throw error;
+    }
+}
+
 // Convert Date object to YYYY-MM-DD safely
 function getYYYYMMDD(dateObj) {
     return dateObj.toLocaleDateString('sv'); 
@@ -577,7 +597,7 @@ async function silentUploadToGist() {
     };
     
     try {
-        const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
+        const res = await fetchWithTimeout(`https://api.github.com/gists/${syncConfig.gistId}`, {
             method: 'PATCH',
             headers: {
                 'Authorization': `token ${syncConfig.token}`,
@@ -605,6 +625,7 @@ async function silentUploadToGist() {
             ind.innerText = "网络同步延迟";
             ind.className = "text-[10px] text-rose-400 font-extrabold";
         }
+        console.warn("Auto-upload delayed due to network:", err);
     }
 }
 
@@ -630,7 +651,7 @@ async function downloadFromGist() {
     showToast('拉取中', '正在从您的专属云端拉取最末次存盘...', 'info');
     
     try {
-        const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
+        const res = await fetchWithTimeout(`https://api.github.com/gists/${syncConfig.gistId}`, {
             headers: {
                 'Authorization': `token ${syncConfig.token}`,
                 'Cache-Control': 'no-cache'
@@ -683,10 +704,11 @@ async function downloadFromGist() {
                 showToast('恢复错误', '未在指定的 Gist 中检索到 "focusos_data.json" 文件。', 'warning');
             }
         } else {
-            showToast('连接失败', '拉取失败。请确认 Token、Gist ID 的正确性与网络通畅。', 'warning');
+            showToast('连接失败', '拉取失败。请确认 Token、Gist ID 的正确性。', 'warning');
         }
     } catch(err) {
-        showToast('同步出错', '网络通信异常，请检查手机数据连接。', 'warning');
+        showToast('同步出错', '连接超时，请确认您的网络是否能流畅访问 GitHub。', 'warning');
+        console.error("Gist download error:", err);
     }
 }
 
@@ -705,7 +727,7 @@ async function autoDownloadOnLoad() {
     }
     
     try {
-        const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
+        const res = await fetchWithTimeout(`https://api.github.com/gists/${syncConfig.gistId}`, {
             headers: {
                 'Authorization': `token ${syncConfig.token}`,
                 'Cache-Control': 'no-cache'
@@ -750,9 +772,10 @@ async function autoDownloadOnLoad() {
         }
     } catch(e) {
         if (ind) {
-            ind.innerText = "网络断开";
+            ind.innerText = "网络断开 (请开启网络工具)";
             ind.className = "text-[10px] text-rose-400 font-bold";
         }
+        console.warn("Initial background sync offline:", e);
     }
 }
 
@@ -768,7 +791,7 @@ async function backgroundSyncCheck() {
     if (isDragging) return;
 
     try {
-        const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
+        const res = await fetchWithTimeout(`https://api.github.com/gists/${syncConfig.gistId}`, {
             method: 'GET',
             headers: {
                 'Authorization': `token ${syncConfig.token}`,
@@ -806,10 +829,18 @@ async function backgroundSyncCheck() {
                     }
                     showToast('检测到多端更新', '已自动对齐您的云端日程与积分数据。', 'success');
                 }
+            } else {
+                // If cloud is updated but has same data, keep icon green
+                const ind = document.getElementById('sync-indicator');
+                if (ind && ind.innerText.includes("网络断开")) {
+                    ind.innerText = "云端已同步";
+                    ind.className = "text-[10px] text-emerald-500 font-extrabold";
+                }
             }
         }
     } catch (e) {
-        console.warn("Background sync error:", e);
+        console.warn("Background sync offline check:", e);
+        // Do not pop toast here to avoid bothering the user during short transient network drops
     }
 }
 
