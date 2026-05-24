@@ -416,6 +416,9 @@ let syncConfig = {
     gistId: ""
 };
 
+// Cloud-First Safety Lock: Prevent newly configured devices from overwriting Gist with empty local state
+let hasPulledFromCloud = false; 
+
 // Tracking coordinates for dragging (Fully optimized for desktop + mobile)
 let isDragging = false;
 let dragStartHour = null;
@@ -489,10 +492,14 @@ function saveSyncSettings() {
     
     localStorage.setItem('focusos_sync_config', JSON.stringify(syncConfig));
     updateSyncIndicator();
-    showToast('同步配置保存', '设置已保存在本设备，自动双向传输就绪。', 'success');
     
-    // Test auto backup instantly
-    triggerAutoUpload();
+    // Reset safety lock for the new configuration
+    hasPulledFromCloud = false; 
+    
+    showToast('正在关联云端', '正在安全连接您的 GitHub 并拉取已有历史数据...', 'info');
+    
+    // Trigger download/pull first instead of immediate auto-push!
+    downloadFromGist();
 }
 
 function loadSyncSettings() {
@@ -503,6 +510,10 @@ function loadSyncSettings() {
             document.getElementById('gh-token').value = syncConfig.token || "";
             document.getElementById('gh-gist-id').value = syncConfig.gistId || "";
         } catch(e) {}
+    }
+    // If no credentials configured yet, we don't lock uploading/saving locally
+    if (!syncConfig.token || !syncConfig.gistId) {
+        hasPulledFromCloud = true;
     }
     updateSyncIndicator();
 }
@@ -540,6 +551,16 @@ function triggerAutoUpload() {
 // Background silent upload
 async function silentUploadToGist() {
     if (!syncConfig.token || !syncConfig.gistId) return;
+    
+    // Cloud-First Safety Lock Check: Block upload if we have not successfully pulled yet on this session/device
+    if (!hasPulledFromCloud) {
+        const ind = document.getElementById('sync-indicator');
+        if (ind) {
+            ind.innerText = "上传受保护 (未对齐)";
+            ind.className = "text-[10px] text-amber-500 font-extrabold animate-pulse";
+        }
+        return;
+    }
     
     const payload = {
         description: "FocusOS Design Cloud Backup",
@@ -606,7 +627,8 @@ async function downloadFromGist() {
     try {
         const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
             headers: {
-                'Authorization': `token ${syncConfig.token}`
+                'Authorization': `token ${syncConfig.token}`,
+                'Cache-Control': 'no-cache'
             }
         });
         
@@ -614,27 +636,49 @@ async function downloadFromGist() {
             const data = await res.json();
             const file = data.files["focusos_data.json"];
             if (file && file.content) {
-                const parsedState = JSON.parse(file.content);
+                let parsedState = {};
+                try {
+                    parsedState = JSON.parse(file.content);
+                } catch(e) {
+                    parsedState = {};
+                }
                 
-                // Overlay the clouds' state on our live variables
-                state.points = parsedState.points || 0;
+                // Check if Gist is completely blank/newly initialized (e.g., "{}" or empty object)
+                if (Object.keys(parsedState).length === 0 || (!parsedState.schedules && !parsedState.memo && parsedState.points === undefined)) {
+                    // Safe to seed the empty cloud with local state
+                    hasPulledFromCloud = true;
+                    lastSyncTimestamp = Date.parse(data.updated_at) || Date.now();
+                    saveStateToLocalStorage();
+                    
+                    showToast('初始化成功', '检测到全新的云端，已将您本地的数据安全同步至云端！', 'success');
+                    
+                    // Trigger immediate seed push
+                    triggerAutoUpload();
+                    return;
+                }
+                
+                // Standard state restoration
+                state.points = parsedState.points !== undefined ? parsedState.points : state.points;
                 state.dailyStats = parsedState.dailyStats || {};
                 state.schedules = parsedState.schedules || {};
                 state.memo = parsedState.memo || "";
                 
                 lastSyncTimestamp = Date.parse(data.updated_at) || Date.now();
+                hasPulledFromCloud = true; // Unlock safety lock
+                
                 saveStateToLocalStorage();
                 
                 // Re-init UI
                 document.getElementById('memo-textarea').value = state.memo;
                 selectNewDate(state.selectedDate);
                 
-                showToast('恢复成功', '云端数据已成功拉回并同步到本地！', 'success');
+                showToast('同步成功', '成功连接并拉取了云端已有数据！', 'success');
+                updateSyncIndicator();
             } else {
                 showToast('恢复错误', '未在指定的 Gist 中检索到 "focusos_data.json" 文件。', 'warning');
             }
         } else {
-            showToast('恢复失败', '无法拉取数据。请检查密钥与 Gist ID 是否对应。', 'warning');
+            showToast('连接失败', '拉取失败。请确认 Token、Gist ID 的正确性与网络通畅。', 'warning');
         }
     } catch(err) {
         showToast('同步出错', '网络通信异常，请检查手机数据连接。', 'warning');
@@ -643,7 +687,11 @@ async function downloadFromGist() {
 
 // Silent Auto-Download on system startup
 async function autoDownloadOnLoad() {
-    if (!syncConfig.token || !syncConfig.gistId) return;
+    if (!syncConfig.token || !syncConfig.gistId) {
+        // If there's no config, local is truth, we bypass the safety lock
+        hasPulledFromCloud = true;
+        return;
+    }
     
     const ind = document.getElementById('sync-indicator');
     if (ind) {
@@ -654,7 +702,8 @@ async function autoDownloadOnLoad() {
     try {
         const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
             headers: {
-                'Authorization': `token ${syncConfig.token}`
+                'Authorization': `token ${syncConfig.token}`,
+                'Cache-Control': 'no-cache'
             }
         });
         
@@ -662,25 +711,31 @@ async function autoDownloadOnLoad() {
             const data = await res.json();
             const file = data.files["focusos_data.json"];
             if (file && file.content) {
-                const parsedState = JSON.parse(file.content);
+                let parsedState = {};
+                try {
+                    parsedState = JSON.parse(file.content);
+                } catch(e) {}
                 
-                state.points = parsedState.points !== undefined ? parsedState.points : state.points;
-                state.dailyStats = parsedState.dailyStats || state.dailyStats;
-                state.schedules = parsedState.schedules || state.schedules;
-                state.memo = parsedState.memo || state.memo;
+                // Only sync if Gist is not empty
+                if (parsedState && (parsedState.schedules || parsedState.memo || parsedState.points !== undefined)) {
+                    state.points = parsedState.points !== undefined ? parsedState.points : state.points;
+                    state.dailyStats = parsedState.dailyStats || state.dailyStats;
+                    state.schedules = parsedState.schedules || state.schedules;
+                    state.memo = parsedState.memo || state.memo;
+                    
+                    // Re-init UI
+                    document.getElementById('memo-textarea').value = state.memo;
+                    selectNewDate(state.selectedDate);
+                }
                 
                 lastSyncTimestamp = Date.parse(data.updated_at) || Date.now();
+                hasPulledFromCloud = true; // Successfully connected and verified, release lock!
                 saveStateToLocalStorage();
-                
-                // Update views
-                document.getElementById('memo-textarea').value = state.memo;
-                selectNewDate(state.selectedDate);
                 
                 if (ind) {
                     ind.innerText = "云端已同步";
                     ind.className = "text-[10px] text-emerald-500 font-extrabold";
                 }
-                showToast('全自动同步就绪', '已自动拉取最新的云端日程与积分数据。', 'success');
             }
         } else {
             if (ind) {
