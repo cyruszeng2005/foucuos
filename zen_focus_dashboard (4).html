@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenFocus - 苹果禅意极简日程与积分系统</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts - Inter & Playfair Display -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        apple: {
+                            light: '#f5f5f7',
+                            card: '#ffffff',
+                            border: '#e5e5ea',
+                            muted: '#86868b',
+                            accent: '#0071e3',
+                            darkText: '#1d1d1f'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Modern light scrollbar matching macOS style */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f5f7;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d1d6;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #acacb0;
+        }
+        /* Glassmorphism for light theme */
+        .glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        /* No select utility */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* Prevent body from scrolling while dragging on mobile */
+        .no-scroll {
+            overflow: hidden !important;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="bg-apple-light text-apple-darkText font-sans h-screen w-screen overflow-hidden flex flex-col justify-between">
+
+<header class="glass border-b border-apple-border px-8 py-3.5 flex justify-between items-center z-10 no-select">
+    <div class="flex items-center space-x-3">
+        <div class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
+        <span class="text-xs font-semibold tracking-widest text-zinc-500 uppercase">ZenFocus OS</span>
+    </div>
+    <div class="text-xs text-apple-muted font-mono font-bold" id="live-clock">
+        正在读取系统时间...
+    </div>
+</header>
+
+<main class="flex-1 flex overflow-hidden relative">
+
+    <!-- ==================== LEFT HALF: CALENDAR SYSTEM ==================== -->
+    <section class="w-1/2 border-r border-apple-border flex flex-col h-full bg-white select-none">
+        
+        <!-- Apple Premium Light Date Controller -->
+        <div class="p-6 border-b border-apple-border flex flex-col space-y-4 no-select">
+            <div class="flex items-center justify-between">
+                <!-- Steve Jobs Minimalist Day Pickers -->
+                <div class="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200/50" id="three-day-capsules">
+                    <button onclick="selectRelativeDay(0)" id="btn-day-0" class="px-5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200">今</button>
+                    <button onclick="selectRelativeDay(1)" id="btn-day-1" class="px-5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200">明</button>
+                    <button onclick="selectRelativeDay(2)" id="btn-day-2" class="px-5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200">后</button>
+                </div>
+                
+                <!-- Clickable Date Label with transparent input overlay to allow browser's native trigger without iframe restriction -->
+                <div class="relative cursor-pointer hover:opacity-80 transition-opacity flex items-center space-x-1.5">
+                    <h2 class="text-sm md:text-base font-bold tracking-tight text-apple-darkText flex items-center space-x-1.5">
+                        <i class="fa-regular fa-calendar-check text-blue-500"></i>
+                        <span id="date-label">正在加载日期...</span>
+                    </h2>
+                    <i class="fa-solid fa-angle-down text-zinc-400 text-xs mt-0.5"></i>
+                    <!-- This hidden date input completely covers the label, native click will trigger system calendar safely -->
+                    <input type="date" id="hidden-date-picker" class="absolute inset-0 w-full h-full opacity-0 pointer-events-auto cursor-pointer z-10" onchange="onDatePickerChange(this)">
+                </div>
+            </div>
+        </div>
+
+        <!-- Google Calendar style Scrollable Timeline Container -->
+        <div class="flex-1 overflow-y-auto relative p-6 bg-gradient-to-b from-white to-zinc-50/50" id="timeline-container">
+            <div class="relative min-h-[1248px] cursor-crosshair" id="timeline-grid" style="height: 1248px;">
+                
+                <!-- Timeline Hours Grid lines -->
+                <div class="absolute inset-0 flex flex-col justify-between" id="grid-lines">
+                    <!-- Javascript will inject 24 hourly slot rows with bolder font sizes -->
+                </div>
+                
+                <!-- Elegant Apple-style dragging preview block (Ghost select frame) -->
+                <div id="drag-preview" class="absolute left-16 right-2 rounded-xl border border-dashed border-blue-400 bg-blue-50/60 pointer-events-none hidden flex flex-col justify-between p-3.5 z-20 shadow-md shadow-blue-500/5">
+                    <div class="flex items-center space-x-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
+                        <span id="drag-preview-title" class="text-xs font-bold text-blue-600">框选新建日程...</span>
+                    </div>
+                    <span id="drag-preview-time" class="text-xs font-mono font-extrabold text-blue-500">00:00 - 00:00</span>
+                </div>
+                
+                <!-- Active events container (overlayed on top, click-through enabled via CSS pointer-events) -->
+                <div class="absolute inset-y-0 right-0 left-16 pointer-events-none z-10" id="events-overlay">
+                    <!-- Events will be absolutely positioned here with pointer-events-auto -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== RIGHT HALF: OVERVIEW & CONTROLS ==================== -->
+    <section class="w-1/2 flex flex-col h-full bg-apple-light overflow-hidden">
+        
+        <!-- Right Top Half - Points & Fragmented Time Cards -->
+        <div class="h-1/2 border-b border-apple-border p-8 flex flex-col justify-between bg-white/40">
+            <!-- Giant Score Display -->
+            <div class="flex flex-col items-center justify-center py-2 text-center">
+                <span class="text-[10px] tracking-widest text-apple-muted font-bold uppercase mb-1">CURRENT INTEGRAL · 当前积分</span>
+                <div class="flex items-baseline space-x-1.5">
+                    <span class="text-6xl font-extrabold tracking-tight text-apple-darkText font-sans transition-all duration-300 ease-out" id="points-display">
+                        0
+                    </span>
+                    <span class="text-sm font-bold text-zinc-400 font-mono">PTS</span>
+                </div>
+                <!-- Cumulative points stats associated with the selected day -->
+                <div class="mt-2.5 flex items-center space-x-4 text-xs text-zinc-500 font-bold">
+                    <span id="points-earned-day" class="flex items-center"><i class="fa-solid fa-arrow-trend-up text-emerald-500 mr-1"></i>今日获得: +0</span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-zinc-200"></span>
+                    <span id="points-spent-day" class="flex items-center"><i class="fa-solid fa-arrow-trend-down text-rose-500 mr-1"></i>今日消耗: -0</span>
+                </div>
+            </div>
+
+            <!-- Two Minimalist Fragmented Time Grid Cards -->
+            <div class="grid grid-cols-2 gap-4">
+                <!-- STUDY CARD -->
+                <div id="card-study" class="bg-white border border-apple-border rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group hover:shadow-sm hover:border-blue-500/30">
+                    <div id="pulse-study" class="absolute inset-0 bg-blue-500/5 opacity-0 pointer-events-none transition-all duration-300"></div>
+                    <div class="flex justify-between items-start z-10">
+                        <div class="p-2.5 bg-blue-50 rounded-xl text-blue-600">
+                            <i class="fa-solid fa-graduation-cap text-lg"></i>
+                        </div>
+                        <span class="text-[10px] font-mono font-extrabold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-md">
+                            +1 积分/分
+                        </span>
+                    </div>
+                    
+                    <div class="mt-5 z-10">
+                        <h4 class="text-sm font-bold text-zinc-800">碎片学习</h4>
+                        <p class="text-xs text-apple-muted mt-0.5" id="timer-study-desc">待开启专注</p>
+                        <div class="text-3xl font-mono font-extrabold text-blue-600 mt-1 hidden animate-pulse" id="timer-study-display">00:00</div>
+                    </div>
+
+                    <button id="btn-study" onclick="toggleTracker('study')" class="mt-4 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 active:scale-98 text-zinc-800 text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-play text-[10px]"></i>
+                        <span>开始学习</span>
+                    </button>
+                </div>
+
+                <!-- PLAY CARD -->
+                <div id="card-play" class="bg-white border border-apple-border rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group hover:shadow-sm hover:border-rose-500/30">
+                    <div id="pulse-play" class="absolute inset-0 bg-rose-500/5 opacity-0 pointer-events-none transition-all duration-300"></div>
+                    <div class="flex justify-between items-start z-10">
+                        <div class="p-2.5 bg-rose-50 rounded-xl text-rose-600">
+                            <i class="fa-solid fa-gamepad text-lg"></i>
+                        </div>
+                        <span class="text-[10px] font-mono font-extrabold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-md">
+                            -5 积分/分
+                        </span>
+                    </div>
+                    
+                    <div class="mt-5 z-10">
+                        <h4 class="text-sm font-bold text-zinc-800">娱乐放松</h4>
+                        <p class="text-xs text-apple-muted mt-0.5" id="timer-play-desc">待开启放松</p>
+                        <div class="text-3xl font-mono font-extrabold text-rose-600 mt-1 hidden animate-pulse" id="timer-play-display">00:00</div>
+                    </div>
+
+                    <button id="btn-play" onclick="toggleTracker('play')" class="mt-4 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 active:scale-98 text-zinc-800 text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-play text-[10px]"></i>
+                        <span>开始放松</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Bottom Half - Zen Rich Text Note -->
+        <div class="h-1/2 p-8 flex flex-col justify-between bg-white/20">
+            <div class="flex items-center justify-between mb-3 no-select">
+                <h3 class="text-xs font-bold tracking-wider text-zinc-500 uppercase flex items-center space-x-2">
+                    <i class="fa-regular fa-note-sticky text-amber-500"></i>
+                    <span>禅意随笔 · 备忘录</span>
+                </h3>
+                <span id="note-status" class="text-xs text-zinc-400 italic font-bold">自动保存中...</span>
+            </div>
+            
+            <div class="flex-1 relative">
+                <textarea id="memo-textarea" placeholder="在此处记下今天的感悟、长期规划或系统待办..." class="w-full h-full bg-white border border-apple-border rounded-xl p-4 text-sm text-zinc-800 placeholder-zinc-400 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/50 resize-none leading-relaxed transition-all duration-200"></textarea>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- ==================== APPLE MINIMAL MODAL: CREATE CALENDAR ITEM ==================== -->
+<div id="modal-container" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+    <div id="modal-card" class="bg-white border border-apple-border w-full max-w-md rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 transform scale-95 p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-base font-bold text-apple-darkText flex items-center space-x-2">
+                <i class="fa-solid fa-calendar-plus text-blue-500"></i>
+                <span>新增日程事项</span>
+            </h3>
+            <button onclick="closeModal()" class="text-zinc-400 hover:text-zinc-600 transition-colors duration-150">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form id="schedule-form" onsubmit="saveSchedule(event)" class="space-y-4">
+            <!-- Title -->
+            <div>
+                <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">事项名称</label>
+                <input required type="text" id="form-title" placeholder="例如：深度思考、健身慢跑、代码重构..." class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+
+            <!-- Times -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">开始时间</label>
+                    <input required type="time" id="form-start" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2 text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">结束时间</label>
+                    <input required type="time" id="form-end" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2 text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
+                </div>
+            </div>
+
+            <!-- Type / Color selection -->
+            <div>
+                <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">待办类型与积分规则</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <!-- Blue: Accumulator -->
+                    <label class="flex flex-col items-center justify-center p-3 border border-apple-border rounded-xl cursor-pointer hover:bg-zinc-50 transition-all duration-150 relative">
+                        <input type="radio" name="type-color" value="blue" checked class="absolute top-2 right-2 accent-blue-500" onclick="toggleCustomPointsField(false)">
+                        <span class="w-4 h-4 rounded-full bg-blue-500 mb-1"></span>
+                        <span class="text-[11px] font-bold text-blue-600">蓝色</span>
+                        <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">+1 积分/分</span>
+                    </label>
+                    <!-- Red: Consumer -->
+                    <label class="flex flex-col items-center justify-center p-3 border border-apple-border rounded-xl cursor-pointer hover:bg-zinc-50 transition-all duration-150 relative">
+                        <input type="radio" name="type-color" value="red" class="absolute top-2 right-2 accent-rose-500" onclick="toggleCustomPointsField(false)">
+                        <span class="w-4 h-4 rounded-full bg-rose-500 mb-1"></span>
+                        <span class="text-[11px] font-bold text-rose-600">红色</span>
+                        <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">-5 积分/分</span>
+                    </label>
+                    <!-- Green: Custom -->
+                    <label class="flex flex-col items-center justify-center p-3 border border-apple-border rounded-xl cursor-pointer hover:bg-zinc-50 transition-all duration-150 relative">
+                        <input type="radio" name="type-color" value="green" class="absolute top-2 right-2 accent-emerald-500" onclick="toggleCustomPointsField(true)">
+                        <span class="w-4 h-4 rounded-full bg-emerald-500 mb-1"></span>
+                        <span class="text-[11px] font-bold text-emerald-600">绿色</span>
+                        <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">自定义加减</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Custom Points Input (Only visible for Green selection) -->
+            <div id="custom-points-wrapper" class="hidden animate-fadeIn">
+                <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">自定义分数 (正数增加，负数扣除)</label>
+                <input type="number" id="form-custom-points" placeholder="如: 30 或 -20" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2 text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
+            </div>
+
+            <!-- Actions -->
+            <div class="pt-4 flex space-x-3">
+                <button type="button" onclick="closeModal()" class="w-1/2 py-2.5 border border-apple-border rounded-lg text-sm font-bold text-zinc-500 hover:bg-zinc-50 transition-colors duration-150">
+                    取消
+                </button>
+                <button type="submit" class="w-1/2 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-lg text-sm font-bold transition-all duration-150 shadow-sm shadow-blue-600/10">
+                    保存事项
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ==================== APPLE CUSTOM TOAST SYSTEM ==================== -->
+<div id="toast" class="fixed bottom-6 right-6 glass border border-apple-border rounded-xl px-5 py-3.5 shadow-xl flex items-center space-x-3 transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none z-50">
+    <div id="toast-icon" class="p-1.5 rounded-lg"></div>
+    <div class="flex flex-col">
+        <span id="toast-title" class="text-xs font-bold text-apple-darkText font-bold">通知</span>
+        <span id="toast-message" class="text-xs text-zinc-500 mt-0.5 font-bold">操作已成功执行</span>
+    </div>
+</div>
+
+<!-- ==================== JAVASCRIPT SYSTEM LOGIC ==================== -->
+<script>
+// Global App State
+let state = {
+    selectedDate: new Date(), // Standard JS Date Object represent active date
+    points: 0,                // Cumulative score (cumulative, across days)
+    dailyStats: {},          // Indexed by 'YYYY-MM-DD' -> { earned: 0, spent: 0 }
+    schedules: {},           // Indexed by Date string 'YYYY-MM-DD'
+    trackers: {
+        study: { active: false, startTime: null, timerId: null, secondsElapsed: 0 },
+        play: { active: false, startTime: null, timerId: null, secondsElapsed: 0 }
+    },
+    memo: ""
+};
+
+// Drag-to-create tracking variables
+let isDragging = false;
+let dragStartHour = null;
+let dragEndHour = null;
+
+// Convert JS Date to localized YYYY-MM-DD string safely avoiding UTC shifts
+function getYYYYMMDD(dateObj) {
+    return dateObj.toLocaleDateString('sv'); // Sweden locale output YYYY-MM-DD
+}
+
+// Format nice display string: "5月24日 (周日)"
+function getDisplayDateString(dateObj) {
+    const months = dateObj.getMonth() + 1;
+    const date = dateObj.getDate();
+    const dayOfWeek = ['周日','周一','周二','周三','周四','周五','周六'][dateObj.getDay()];
+    return `${months}月${date}日 (${dayOfWeek})`;
+}
+
+// Local Storage Handlers
+function saveStateToLocalStorage() {
+    localStorage.setItem('zenfocus_state_v3_light', JSON.stringify({
+        points: state.points,
+        dailyStats: state.dailyStats,
+        schedules: state.schedules,
+        memo: state.memo
+    }));
+}
+
+function loadStateFromLocalStorage() {
+    const stored = localStorage.getItem('zenfocus_state_v3_light');
+    if (stored) {
+        try {
+            const parsed = JSON.parse(stored);
+            state.points = parsed.points || 0;
+            state.dailyStats = parsed.dailyStats || {};
+            state.schedules = parsed.schedules || {};
+            state.memo = parsed.memo || "";
+        } catch (e) {
+            console.error("Localstorage restoration error:", e);
+        }
+    } else {
+        // Fallback or migration check from legacy key versions
+        const legacy = localStorage.getItem('zenfocus_state_unlimited_dates');
+        if (legacy) {
+            try {
+                const parsed = JSON.parse(legacy);
+                state.points = parsed.points || 0;
+                state.schedules = parsed.schedules || {};
+                state.memo = parsed.memo || "";
+                
+                // Convert simple legacy stats to dates index
+                const todayStr = getYYYYMMDD(new Date());
+                state.dailyStats[todayStr] = {
+                    earned: parsed.dailyEarned || 0,
+                    spent: parsed.dailySpent || 0
+                };
+                saveStateToLocalStorage();
+            } catch (e) {
+                console.error("Legacy migration error:", e);
+            }
+        }
+    }
+}
+
+// Elegant notifications
+function showToast(title, message, type = 'info') {
+    const toast = document.getElementById('toast');
+    const toastIcon = document.getElementById('toast-icon');
+    const toastTitle = document.getElementById('toast-title');
+    const toastMessage = document.getElementById('toast-message');
+    
+    let colorClass = 'bg-blue-50 text-blue-600 border border-blue-100';
+    let iconHTML = '<i class="fa-solid fa-circle-info"></i>';
+    if (type === 'success') {
+        colorClass = 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+        iconHTML = '<i class="fa-solid fa-circle-check"></i>';
+    } else if (type === 'warning') {
+        colorClass = 'bg-rose-50 text-rose-600 border border-rose-100';
+        iconHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
+    }
+    
+    toastIcon.className = `p-1.5 rounded-lg ${colorClass}`;
+    toastIcon.innerHTML = iconHTML;
+    toastTitle.innerText = title;
+    toastMessage.innerText = message;
+    
+    toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+    toast.classList.add('translate-y-0', 'opacity-100');
+    
+    setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+    }, 3000);
+}
+
+// Live clock (macOS format)
+function initClock() {
+    const update = () => {
+        const d = new Date();
+        document.getElementById('live-clock').innerText = d.toLocaleTimeString('zh-CN', { hour12: false });
+    };
+    update();
+    setInterval(update, 1000);
+}
+
+// Get day-specific stats safely
+function getDayStatsObj(dateStr) {
+    if (!state.dailyStats[dateStr]) {
+        state.dailyStats[dateStr] = { earned: 0, spent: 0 };
+    }
+    return state.dailyStats[dateStr];
+}
+
+// Update UI numerical metrics
+function updatePointsUI() {
+    // Cumulative points
+    const element = document.getElementById('points-display');
+    element.innerText = Math.round(state.points);
+    
+    // Day-specific points
+    const dateKey = getYYYYMMDD(state.selectedDate);
+    const dayStats = getDayStatsObj(dateKey);
+
+    document.getElementById('points-earned-day').innerHTML = `<i class="fa-solid fa-arrow-trend-up text-emerald-500 mr-1"></i>今日获得: +${Math.round(dayStats.earned)}`;
+    document.getElementById('points-spent-day').innerHTML = `<i class="fa-solid fa-arrow-trend-down text-rose-500 mr-1"></i>今日消耗: -${Math.abs(Math.round(dayStats.spent))}`;
+}
+
+// Day Navigation Capsules Controller (今 明 后)
+function selectRelativeDay(offset) {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    selectNewDate(d);
+}
+
+function onDatePickerChange(input) {
+    if (input.value) {
+        selectNewDate(new Date(input.value));
+    }
+}
+
+// Core Date Switcher
+function selectNewDate(targetDate) {
+    state.selectedDate = new Date(targetDate);
+    
+    const targetStr = getYYYYMMDD(state.selectedDate);
+    
+    // Refresh Top UI Date Indicators
+    document.getElementById('date-label').innerText = getDisplayDateString(state.selectedDate);
+    document.getElementById('hidden-date-picker').value = targetStr;
+
+    // Highlight proper capsule button (0=Today, 1=Tomorrow, 2=Day After)
+    const todayStr = getYYYYMMDD(new Date());
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = getYYYYMMDD(tomorrow);
+    const dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
+    const dayAfterStr = getYYYYMMDD(dayAfter);
+
+    // Reset styles
+    const btn0 = document.getElementById('btn-day-0');
+    const btn1 = document.getElementById('btn-day-1');
+    const btn2 = document.getElementById('btn-day-2');
+
+    const activeClass = "bg-white text-blue-600 shadow-sm border border-zinc-200/50 font-extrabold";
+    const inactiveClass = "text-zinc-500 hover:text-zinc-800 font-bold";
+
+    btn0.className = `px-5 py-1.5 text-xs rounded-lg transition-all duration-200 ${targetStr === todayStr ? activeClass : inactiveClass}`;
+    btn1.className = `px-5 py-1.5 text-xs rounded-lg transition-all duration-200 ${targetStr === tomorrowStr ? activeClass : inactiveClass}`;
+    btn2.className = `px-5 py-1.5 text-xs rounded-lg transition-all duration-200 ${targetStr === dayAfterStr ? activeClass : inactiveClass}`;
+
+    renderTimelineGrid();
+    renderEvents();
+    updatePointsUI();
+}
+
+// Render hourly indicators on background grid
+function renderTimelineGrid() {
+    const gridLines = document.getElementById('grid-lines');
+    gridLines.innerHTML = '';
+    
+    for (let i = 0; i < 24; i++) {
+        const timeStr = `${String(i).padStart(2, '0')}:00`;
+        const slotDiv = document.createElement('div');
+        
+        slotDiv.className = "relative flex items-center h-[52px] border-b border-zinc-100/80 transition-colors duration-150 pointer-events-none";
+        slotDiv.style.top = `${i * 52}px`;
+        
+        slotDiv.innerHTML = `
+            <span class="absolute left-0 text-xs md:text-sm font-mono font-extrabold text-zinc-500/80 select-none">${timeStr}</span>
+            <div class="ml-16 w-full h-[1px] bg-zinc-100/60"></div>
+        `;
+        gridLines.appendChild(slotDiv);
+    }
+}
+
+// Converting decimal hours to HH:MM format
+function decimalToTimeStr(decimal) {
+    const h = Math.floor(decimal);
+    const m = Math.round((decimal - h) * 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// Converting HH:MM representation to pixel distances
+function timeToPixels(timeStr) {
+    const parts = timeStr.split(':');
+    const hours = parseInt(parts[0], 10);
+    const minutes = parseInt(parts[1], 10);
+    const totalHours = hours + (minutes / 60);
+    return totalHours * 52;
+}
+
+function initDragToCreateEngine() {
+    const grid = document.getElementById('timeline-grid');
+    
+    // Mouse Event Listeners
+    grid.addEventListener('mousedown', (e) => {
+        if (e.button !== 0 || e.target.closest('.pointer-events-auto')) return;
+        
+        const rect = grid.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const hourDecimal = y / 52;
+        
+        dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
+        dragEndHour = dragStartHour;
+        isDragging = true;
+        
+        updateDragPreview();
+        
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+    });
+
+    // Touch Event Listeners for Tablets / Phones
+    grid.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.pointer-events-auto')) return;
+        
+        const touch = e.touches[0];
+        const rect = grid.getBoundingClientRect();
+        const y = touch.clientY - rect.top;
+        const hourDecimal = y / 52;
+        
+        dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
+        dragEndHour = dragStartHour;
+        isDragging = true;
+        
+        updateDragPreview();
+        document.body.classList.add('no-scroll');
+        
+        grid.addEventListener('touchmove', handleTouchMove, { passive: false });
+        grid.addEventListener('touchend', handleTouchEnd);
+    }, { passive: true });
+}
+
+function handleMouseMove(e) {
+    if (!isDragging) return;
+    const grid = document.getElementById('timeline-grid');
+    const rect = grid.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const hourDecimal = y / 52;
+    
+    dragEndHour = Math.max(0, Math.min(24, Math.round(hourDecimal * 4) / 4));
+    updateDragPreview();
+}
+
+function handleMouseUp(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    window.removeEventListener('mousemove', handleMouseMove);
+    window.removeEventListener('mouseup', handleMouseUp);
+    
+    finalizeDragSelection();
+}
+
+function handleTouchMove(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    
+    const touch = e.touches[0];
+    const grid = document.getElementById('timeline-grid');
+    const rect = grid.getBoundingClientRect();
+    const y = touch.clientY - rect.top;
+    const hourDecimal = y / 52;
+    
+    dragEndHour = Math.max(0, Math.min(24, Math.round(hourDecimal * 4) / 4));
+    updateDragPreview();
+}
+
+function handleTouchEnd(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    document.body.classList.remove('no-scroll');
+    const grid = document.getElementById('timeline-grid');
+    grid.removeEventListener('touchmove', handleTouchMove);
+    grid.removeEventListener('touchend', handleTouchEnd);
+    
+    finalizeDragSelection();
+}
+
+function updateDragPreview() {
+    const preview = document.getElementById('drag-preview');
+    preview.classList.remove('hidden');
+    
+    let start = Math.min(dragStartHour, dragEndHour);
+    let end = Math.max(dragStartHour, dragEndHour);
+    
+    const topPx = start * 52;
+    const heightPx = Math.max((end - start) * 52, 10);
+    
+    preview.style.top = `${topPx}px`;
+    preview.style.height = `${heightPx}px`;
+    
+    const startTimeStr = decimalToTimeStr(start);
+    const endTimeStr = decimalToTimeStr(end);
+    document.getElementById('drag-preview-time').innerText = `${startTimeStr} - ${endTimeStr}`;
+}
+
+function finalizeDragSelection() {
+    document.getElementById('drag-preview').classList.add('hidden');
+    
+    let start = Math.min(dragStartHour, dragEndHour);
+    let end = Math.max(dragStartHour, dragEndHour);
+    
+    if (end - start < 0.25) {
+        end = start + 1.0;
+        if (end > 24) {
+            end = 24;
+            start = 23;
+        }
+    }
+    
+    const startTimeStr = decimalToTimeStr(start);
+    const endTimeStr = decimalToTimeStr(end);
+    openModalWithRange(startTimeStr, endTimeStr);
+}
+
+function openModalWithRange(startStr, endStr) {
+    document.getElementById('form-start').value = startStr;
+    document.getElementById('form-end').value = endStr;
+    
+    const modal = document.getElementById('modal-container');
+    const card = document.getElementById('modal-card');
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    card.classList.remove('scale-95');
+    card.classList.add('scale-100');
+}
+
+function closeModal() {
+    const modal = document.getElementById('modal-container');
+    const card = document.getElementById('modal-card');
+    modal.classList.add('opacity-0', 'pointer-events-none');
+    card.classList.add('scale-95');
+    card.classList.remove('scale-100');
+    document.getElementById('schedule-form').reset();
+    toggleCustomPointsField(false);
+}
+
+function toggleCustomPointsField(show) {
+    const element = document.getElementById('custom-points-wrapper');
+    if (show) {
+        element.classList.remove('hidden');
+        document.getElementById('form-custom-points').setAttribute('required', 'true');
+    } else {
+        element.classList.add('hidden');
+        document.getElementById('form-custom-points').removeAttribute('required');
+    }
+}
+
+function saveSchedule(e) {
+    e.preventDefault();
+    const title = document.getElementById('form-title').value;
+    const startTime = document.getElementById('form-start').value;
+    const endTime = document.getElementById('form-end').value;
+    
+    if (startTime >= endTime) {
+        showToast('时间冲突', '日程结束时间必须晚于开始时间。', 'warning');
+        return;
+    }
+
+    const typeNode = document.querySelector('input[name="type-color"]:checked');
+    const color = typeNode ? typeNode.value : 'blue';
+    let customPoints = 0;
+    if (color === 'green') {
+        customPoints = parseInt(document.getElementById('form-custom-points').value, 10) || 0;
+    }
+
+    const newEvent = {
+        id: 'evt_' + Date.now(),
+        title,
+        start: startTime,
+        end: endTime,
+        color,
+        customPoints,
+        completed: false
+    };
+
+    const dateKey = getYYYYMMDD(state.selectedDate);
+    if (!state.schedules[dateKey]) {
+        state.schedules[dateKey] = [];
+    }
+    
+    state.schedules[dateKey].push(newEvent);
+    saveStateToLocalStorage();
+    renderEvents();
+    closeModal();
+    showToast('日程已创建', `成功添加 "${title}" 到时间线。`, 'success');
+}
+
+// Render actual schedules for the currently selected date string
+function renderEvents() {
+    const container = document.getElementById('events-overlay');
+    container.innerHTML = '';
+
+    const dateKey = getYYYYMMDD(state.selectedDate);
+    const list = state.schedules[dateKey] || [];
+    
+    list.forEach(evt => {
+        const topPx = timeToPixels(evt.start);
+        const endPx = timeToPixels(evt.end);
+        const heightPx = Math.max(endPx - topPx, 44);
+
+        const card = document.createElement('div');
+        
+        card.className = `absolute left-2 right-2 rounded-xl p-3 border shadow-sm transition-all duration-300 flex flex-col justify-between overflow-hidden group select-none pointer-events-auto ${
+            evt.completed 
+            ? 'opacity-50 bg-zinc-50 border-zinc-200 line-through text-zinc-400 shadow-none' 
+            : getEventThemeClasses(evt.color)
+        }`;
+        
+        card.style.top = `${topPx}px`;
+        card.style.height = `${heightPx}px`;
+        
+        card.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        const mins = getDurationMinutes(evt.start, evt.end);
+        let ptsHelper = "";
+        if (evt.color === 'blue') ptsHelper = `+${mins} PTS`;
+        else if (evt.color === 'red') ptsHelper = `-${mins * 5} PTS`;
+        else ptsHelper = `${evt.customPoints >= 0 ? '+' : ''}${evt.customPoints} PTS`;
+
+        card.innerHTML = `
+            <div class="flex items-start justify-between w-full h-full">
+                <!-- Left Details -->
+                <div class="flex items-start space-x-2.5 overflow-hidden h-full">
+                    <input type="checkbox" ${evt.completed ? 'checked' : ''} onclick="toggleEventCompletion('${evt.id}', event)" class="mt-0.5 w-4.5 h-4.5 rounded border-zinc-300 text-blue-600 focus:ring-0 cursor-pointer accent-blue-600">
+                    <div class="flex flex-col overflow-hidden">
+                        <span class="text-xs md:text-sm font-bold truncate ${evt.completed ? 'text-zinc-400' : 'text-zinc-800'}">${evt.title}</span>
+                        <span class="text-[11px] md:text-xs font-mono font-extrabold text-zinc-500/90 mt-0.5">${evt.start} - ${evt.end} (${mins}分)</span>
+                    </div>
+                </div>
+                
+                <!-- Right Action Badge -->
+                <div class="flex flex-col items-end justify-between h-full min-w-[70px]">
+                    <span class="text-[10px] font-mono font-extrabold px-1.5 py-0.5 rounded ${evt.completed ? 'bg-zinc-200 text-zinc-400' : getBadgeThemeClasses(evt.color)}">
+                        ${ptsHelper}
+                    </span>
+                    <button onclick="deleteEvent('${evt.id}', event)" class="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-500 text-[12px] transition-opacity duration-150 p-1">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function getEventThemeClasses(color) {
+    switch (color) {
+        case 'blue': return 'bg-blue-50/95 border-blue-200/80 hover:bg-blue-100/70 text-blue-800';
+        case 'red': return 'bg-rose-50/90 border-rose-200/80 hover:bg-rose-100/70 text-rose-800';
+        case 'green': return 'bg-emerald-50/90 border-emerald-200/80 hover:bg-emerald-100/70 text-emerald-800';
+        default: return 'bg-white border-zinc-200 text-zinc-800';
+    }
+}
+
+function getBadgeThemeClasses(color) {
+    switch (color) {
+        case 'blue': return 'bg-blue-100 text-blue-700';
+        case 'red': return 'bg-rose-100 text-rose-700';
+        case 'green': return 'bg-emerald-100 text-emerald-700';
+        default: return 'bg-zinc-100 text-zinc-600';
+    }
+}
+
+function getDurationMinutes(start, end) {
+    const s = start.split(':');
+    const e = end.split(':');
+    const startMins = parseInt(s[0], 10) * 60 + parseInt(s[1], 10);
+    const endMins = parseInt(e[0], 10) * 60 + parseInt(e[1], 10);
+    return Math.max(endMins - startMins, 0);
+}
+
+function toggleEventCompletion(id, event) {
+    event.stopPropagation();
+    const dateKey = getYYYYMMDD(state.selectedDate);
+    const list = state.schedules[dateKey] || [];
+    const index = list.findIndex(e => e.id === id);
+    if (index === -1) return;
+
+    const evt = list[index];
+    evt.completed = !evt.completed;
+
+    const durationMins = getDurationMinutes(evt.start, evt.end);
+    let scoreDelta = 0;
+
+    if (evt.color === 'blue') {
+        scoreDelta = durationMins * 1; 
+    } else if (evt.color === 'red') {
+        scoreDelta = durationMins * -5; 
+    } else if (evt.color === 'green') {
+        scoreDelta = evt.customPoints; 
+    }
+
+    const dayStats = getDayStatsObj(dateKey);
+
+    if (evt.completed) {
+        state.points += scoreDelta;
+        if (scoreDelta >= 0) {
+            dayStats.earned += scoreDelta;
+            showToast('任务开启完成', `已结算，增加积分 +${scoreDelta}`, 'success');
+        } else {
+            dayStats.spent += scoreDelta;
+            showToast('任务消耗完成', `已扣除，抵消积分 ${scoreDelta}`, 'warning');
+        }
+    } else {
+        // Rollback
+        state.points -= scoreDelta;
+        if (scoreDelta >= 0) {
+            dayStats.earned -= scoreDelta;
+            showToast('撤销日程完成', `扣回已获积分 -${scoreDelta}`, 'info');
+        } else {
+            dayStats.spent -= scoreDelta;
+            showToast('撤销日程完成', `退还消耗积分 +${Math.abs(scoreDelta)}`, 'info');
+        }
+    }
+
+    saveStateToLocalStorage();
+    renderEvents();
+    updatePointsUI();
+}
+
+function deleteEvent(id, event) {
+    event.stopPropagation();
+    const dateKey = getYYYYMMDD(state.selectedDate);
+    const list = state.schedules[dateKey] || [];
+    const index = list.findIndex(e => e.id === id);
+    if (index === -1) return;
+
+    const evt = list[index];
+    if (evt.completed) {
+        const durationMins = getDurationMinutes(evt.start, evt.end);
+        let scoreDelta = 0;
+        if (evt.color === 'blue') scoreDelta = durationMins * 1;
+        else if (evt.color === 'red') scoreDelta = durationMins * -5;
+        else if (evt.color === 'green') scoreDelta = evt.customPoints;
+
+        const dayStats = getDayStatsObj(dateKey);
+
+        state.points -= scoreDelta;
+        if (scoreDelta >= 0) dayStats.earned -= scoreDelta;
+        else dayStats.spent -= scoreDelta;
+    }
+
+    list.splice(index, 1);
+    saveStateToLocalStorage();
+    renderEvents();
+    updatePointsUI();
+    showToast('删除日程', '日程已彻底从时间线移除', 'info');
+}
+
+function toggleTracker(type) {
+    const isRunning = state.trackers[type].active;
+    const todayStr = getYYYYMMDD(new Date()); // Tracker always records to the physical today!
+    
+    if (!isRunning) {
+        const otherType = type === 'study' ? 'play' : 'study';
+        if (state.trackers[otherType].active) {
+            toggleTracker(otherType); // Autoclose other tracker
+        }
+
+        state.trackers[type].active = true;
+        state.trackers[type].startTime = Date.now();
+        state.trackers[type].secondsElapsed = 0;
+        
+        document.getElementById(`pulse-${type}`).classList.remove('opacity-0');
+        document.getElementById(`pulse-${type}`).classList.add('opacity-100');
+        document.getElementById(`card-${type}`).classList.add(type === 'study' ? 'border-blue-500' : 'border-rose-500');
+        document.getElementById(`timer-${type}-display`).classList.remove('hidden');
+        document.getElementById(`timer-${type}-desc`).innerText = "进行中...";
+        
+        const btn = document.getElementById(`btn-${type}`);
+        btn.innerHTML = `<i class="fa-solid fa-stop text-[10px]"></i> <span>停止计时</span>`;
+        btn.className = "mt-4 w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 shadow-sm";
+
+        state.trackers[type].timerId = setInterval(() => {
+            state.trackers[type].secondsElapsed++;
+            const s = state.trackers[type].secondsElapsed;
+            
+            const displayMin = String(Math.floor(s / 60)).padStart(2, '0');
+            const displaySec = String(s % 60).padStart(2, '0');
+            document.getElementById(`timer-${type}-display`).innerText = `${displayMin}:${displaySec}`;
+            
+            const dayStats = getDayStatsObj(todayStr);
+
+            if (type === 'study') {
+                const add = 1 / 60;
+                state.points += add;
+                dayStats.earned += add;
+            } else {
+                const sub = -5 / 60;
+                state.points += sub;
+                dayStats.spent += sub;
+            }
+            updatePointsUI();
+        }, 1000);
+
+        showToast(type === 'study' ? '开始深度专注' : '开始放松时光', '积分已挂接，正在实时累积/扣除。', 'success');
+    } else {
+        clearInterval(state.trackers[type].timerId);
+        
+        const finalSecs = state.trackers[type].secondsElapsed;
+        const finalMins = Math.round(finalSecs / 60);
+        let totalImpact = 0;
+        if (type === 'study') {
+            totalImpact = Math.round(finalSecs / 60 * 1);
+        } else {
+            totalImpact = Math.round(finalSecs / 60 * -5);
+        }
+
+        state.trackers[type].active = false;
+        state.trackers[type].timerId = null;
+        state.trackers[type].secondsElapsed = 0;
+
+        document.getElementById(`pulse-${type}`).classList.remove('opacity-100');
+        document.getElementById(`pulse-${type}`).classList.add('opacity-0');
+        document.getElementById(`card-${type}`).classList.remove('border-blue-500', 'border-rose-500');
+        document.getElementById(`timer-${type}-display`).classList.add('hidden');
+        document.getElementById(`timer-${type}-desc`).innerText = "待开启计时";
+
+        const btn = document.getElementById(`btn-${type}`);
+        btn.innerHTML = `<i class="fa-solid fa-play text-[10px]"></i> <span>开始${type === 'study' ? '学习' : '放松'}</span>`;
+        btn.className = "mt-4 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5";
+
+        saveStateToLocalStorage();
+        updatePointsUI();
+
+        showToast(
+            '活动阶段结束', 
+            `持续计时 ${finalMins} 分钟。积分净变动：${totalImpact >= 0 ? '+' : ''}${totalImpact}`, 
+            type === 'study' ? 'success' : 'warning'
+        );
+    }
+}
+
+// Memo system auto-saves
+function initMemoController() {
+    const memo = document.getElementById('memo-textarea');
+    memo.value = state.memo;
+    
+    let typingTimer;
+    memo.addEventListener('input', () => {
+        const status = document.getElementById('note-status');
+        status.innerText = "输入中...";
+        
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => {
+            state.memo = memo.value;
+            saveStateToLocalStorage();
+            status.innerText = "已自动保存";
+        }, 800);
+    });
+}
+
+// Window Onload Starter Setup
+window.onload = function() {
+    loadStateFromLocalStorage();
+    initClock();
+    selectNewDate(new Date()); // Auto focus today
+    initDragToCreateEngine();
+    initMemoController();
+}
+</script>
+
+</body>
+</html>
