@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ZenFocus - 苹果禅意极简日程与积分系统</title>
+    <title>ZenFocus - Design by 曾晨阳</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -144,11 +144,11 @@
                     <!-- JS will absolute-position 24 lines precisely -->
                 </div>
                 
-                <!-- Elegantly animated Drag Preview Frame (Desktop only) -->
+                <!-- Elegantly animated Drag Preview Frame -->
                 <div id="drag-preview" class="absolute left-16 right-4 rounded-xl border-2 border-dashed border-blue-400 bg-blue-50/60 pointer-events-none hidden flex flex-col justify-between p-3 z-20 shadow-lg shadow-blue-500/5">
                     <div class="flex items-center space-x-1.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                        <span id="drag-preview-title" class="text-[11px] font-bold text-blue-600">框选创建日程...</span>
+                        <span id="drag-preview-title" class="text-[11px] font-bold text-blue-600 font-sans">框选创建日程...</span>
                     </div>
                     <span id="drag-preview-time" class="text-xs font-mono font-black text-blue-500">00:00 - 00:00</span>
                 </div>
@@ -162,7 +162,6 @@
     </section>
 
     <!-- ==================== RIGHT HALF: OVERVIEW & CONTROLS (Tab 2 & 3 on Mobile) ==================== -->
-    <!-- On desktop: flex-col with two halves. On mobile: toggled by navigation buttons -->
     <section id="section-right" class="w-full md:w-1/2 flex flex-col h-full bg-apple-light overflow-hidden transition-all duration-300">
         
         <!-- Right Top Half - Points & Timer (Tab 2 on Mobile) -->
@@ -365,20 +364,24 @@ let state = {
     activeMobileTab: 'calendar' // 'calendar' | 'focus' | 'memo'
 };
 
-// Tracking coordinates for dragging (Desktop only)
+// Tracking coordinates for dragging (Fully optimized for desktop + mobile)
 let isDragging = false;
 let dragStartHour = null;
 let dragEndHour = null;
 
-// Convert Date object to YYYY-MM-DD
+// Convert Date object to YYYY-MM-DD safely
 function getYYYYMMDD(dateObj) {
     return dateObj.toLocaleDateString('sv'); 
 }
 
-// Convert absolute hour decimal to text
+// Convert absolute hour decimal to precise text (Fixed 60 mins bug)
 function decimalToTimeStr(decimal) {
-    const h = Math.floor(decimal);
-    const m = Math.round((decimal - h) * 60);
+    let h = Math.floor(decimal);
+    let m = Math.round((decimal - h) * 60);
+    if (m === 60) {
+        h += 1;
+        m = 0;
+    }
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
@@ -608,7 +611,7 @@ function renderTimelineGrid() {
         lineDiv.style.height = `52px`;
         
         lineDiv.innerHTML = `
-            <span class="absolute left-0 text-xs md:text-sm font-black text-zinc-500 select-none font-mono -translate-y-6">${timeStr}</span>
+            <span class="absolute left-0 text-sm font-black text-zinc-600 select-none font-mono -translate-y-6">${timeStr}</span>
             <div class="ml-16 w-full h-[1px] bg-zinc-200/50"></div>
         `;
         gridLines.appendChild(lineDiv);
@@ -624,79 +627,94 @@ function timeToPixels(timeStr) {
     return totalHours * 52;
 }
 
-// Interactive Scheduler drag and tap controller
+// Interactive Scheduler drag and tap controller (Completely unifies desktop and mobile)
 function initInteractiveScheduleEngine() {
     const grid = document.getElementById('timeline-grid');
-    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
-    if (isMobile) {
-        // MOBILE ONLY - Standard tap creates instant events. Smooth scrolling preserved.
-        grid.addEventListener('click', (e) => {
-            if (e.target.closest('.pointer-events-auto')) return; // Ignore completed checks or delete clicks
-            
-            const rect = grid.getBoundingClientRect();
-            const y = e.clientY - rect.top;
-            const hourDecimal = y / 52;
-            
-            // Round to nearest 15-minute intervals
-            const roundedHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
-            const startStr = decimalToTimeStr(roundedHour);
-            const endStr = decimalToTimeStr(Math.min(24, roundedHour + 1.0)); // Default duration: 1 hour
-            
-            openModalWithRange(startStr, endStr);
-        });
-    } else {
-        // DESKTOP ONLY - Drag to lasso select dates
-        grid.addEventListener('mousedown', (e) => {
-            if (e.button !== 0 || e.target.closest('.pointer-events-auto')) return;
-            
-            const rect = grid.getBoundingClientRect();
-            const y = e.clientY - rect.top;
-            const hourDecimal = y / 52;
-            
-            dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
-            dragEndHour = dragStartHour;
-            isDragging = true;
-            
-            updateDragPreview();
-            
-            window.addEventListener('mousemove', handleMouseMove);
-            window.addEventListener('mouseup', handleMouseUp);
-        });
+    // 1. DESKTOP MOUSE EVENTS
+    grid.addEventListener('mousedown', (e) => {
+        if (e.button !== 0 || e.target.closest('.pointer-events-auto')) return;
         
-        // Single tap backup for desktop as well
-        grid.addEventListener('click', (e) => {
-            if (e.target.closest('.pointer-events-auto') || isDragging) return;
-            const rect = grid.getBoundingClientRect();
-            const y = e.clientY - rect.top;
-            const hourDecimal = y / 52;
-            const roundedHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
-            const startStr = decimalToTimeStr(roundedHour);
-            const endStr = decimalToTimeStr(Math.min(24, roundedHour + 1.0));
-            openModalWithRange(startStr, endStr);
-        });
+        const rect = grid.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        if (clickX < 64) return; // Ignore dragging on the left label track
+
+        const y = e.clientY - rect.top;
+        const hourDecimal = y / 52;
+        
+        dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
+        dragEndHour = dragStartHour;
+        isDragging = true;
+        
+        updateDragPreview();
+        
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+    });
+
+    function handleMouseMove(e) {
+        if (!isDragging) return;
+        const rect = grid.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const hourDecimal = y / 52;
+        
+        dragEndHour = Math.max(0, Math.min(24, Math.round(hourDecimal * 4) / 4));
+        updateDragPreview();
     }
-}
 
-function handleMouseMove(e) {
-    if (!isDragging) return;
-    const grid = document.getElementById('timeline-grid');
-    const rect = grid.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const hourDecimal = y / 52;
-    
-    dragEndHour = Math.max(0, Math.min(24, Math.round(hourDecimal * 4) / 4));
-    updateDragPreview();
-}
+    function handleMouseUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+        
+        finalizeDragSelection();
+    }
 
-function handleMouseUp(e) {
-    if (!isDragging) return;
-    isDragging = false;
-    
-    window.removeEventListener('mousemove', handleMouseMove);
-    window.removeEventListener('mouseup', handleMouseUp);
-    
-    finalizeDragSelection();
+    // 2. MOBILE TOUCH EVENTS - Direct drag-to-create with Scroll Zone
+    grid.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.pointer-events-auto')) return;
+
+        const touch = e.touches[0];
+        const rect = grid.getBoundingClientRect();
+        const clickX = touch.clientX - rect.left;
+
+        // If touching on the left 64px axis, let standard scrolling happen!
+        if (clickX < 64) {
+            return; 
+        }
+
+        // If touching on the grid area, lock scrolling and start drawing!
+        e.preventDefault(); 
+        const y = touch.clientY - rect.top;
+        const hourDecimal = y / 52;
+
+        dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
+        dragEndHour = dragStartHour;
+        isDragging = true;
+
+        updateDragPreview();
+    }, { passive: false });
+
+    grid.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault(); // Keep locked on drawing
+
+        const touch = e.touches[0];
+        const rect = grid.getBoundingClientRect();
+        const y = touch.clientY - rect.top;
+        const hourDecimal = y / 52;
+
+        dragEndHour = Math.max(0, Math.min(24, Math.round(hourDecimal * 4) / 4));
+        updateDragPreview();
+    }, { passive: false });
+
+    grid.addEventListener('touchend', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        finalizeDragSelection();
+    });
 }
 
 function updateDragPreview() {
@@ -723,7 +741,7 @@ function finalizeDragSelection() {
     let start = Math.min(dragStartHour, dragEndHour);
     let end = Math.max(dragStartHour, dragEndHour);
     
-    // Auto scale to 1 hour if too small
+    // Auto scale to 1 hour if just a tap
     if (end - start < 0.25) {
         end = start + 1.0;
         if (end > 24) {
@@ -849,7 +867,7 @@ function renderEvents() {
                     </div>
                     <div class="flex flex-col overflow-hidden">
                         <span class="text-xs md:text-sm font-black truncate ${evt.completed ? 'text-zinc-400' : 'text-zinc-800'}">${evt.title}</span>
-                        <span class="text-[11px] font-mono font-black text-zinc-500/90 mt-0.5">${evt.start} - ${evt.end} (${mins}分)</span>
+                        <span class="text-[11px] font-mono font-black text-zinc-600/90 mt-0.5">${evt.start} - ${evt.end} (${mins}分)</span>
                     </div>
                 </div>
                 
