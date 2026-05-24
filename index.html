@@ -421,6 +421,7 @@ let isDragging = false;
 let dragStartHour = null;
 let dragEndHour = null;
 let autoUploadTimeout = null;
+let lastSyncTimestamp = 0; // Tracks when we last synced to avoid redundant downloads
 
 // Convert Date object to YYYY-MM-DD safely
 function getYYYYMMDD(dateObj) {
@@ -561,6 +562,7 @@ async function silentUploadToGist() {
         
         const ind = document.getElementById('sync-indicator');
         if (res.ok) {
+            lastSyncTimestamp = Date.now(); // Mark the update locally
             if (ind) {
                 ind.innerText = "云端已同步";
                 ind.className = "text-[10px] text-emerald-500 font-extrabold";
@@ -620,6 +622,7 @@ async function downloadFromGist() {
                 state.schedules = parsedState.schedules || {};
                 state.memo = parsedState.memo || "";
                 
+                lastSyncTimestamp = Date.parse(data.updated_at) || Date.now();
                 saveStateToLocalStorage();
                 
                 // Re-init UI
@@ -666,6 +669,7 @@ async function autoDownloadOnLoad() {
                 state.schedules = parsedState.schedules || state.schedules;
                 state.memo = parsedState.memo || state.memo;
                 
+                lastSyncTimestamp = Date.parse(data.updated_at) || Date.now();
                 saveStateToLocalStorage();
                 
                 // Update views
@@ -689,6 +693,63 @@ async function autoDownloadOnLoad() {
             ind.innerText = "网络断开";
             ind.className = "text-[10px] text-rose-400 font-bold";
         }
+    }
+}
+
+// Smart Sync Check: Checks for changes in the cloud every 30 seconds
+async function backgroundSyncCheck() {
+    // Only fetch if tab is active, has config, and user is not actively typing or running a local tracker
+    if (document.visibilityState !== 'visible' || !syncConfig.token || !syncConfig.gistId) return;
+    
+    // Skip if focused on memo to prevent cursor snapping
+    if (document.activeElement === document.getElementById('memo-textarea')) return;
+    
+    // Skip if actively dragging
+    if (isDragging) return;
+
+    try {
+        const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `token ${syncConfig.token}`,
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            const cloudUpdatedAt = Date.parse(data.updated_at) || 0;
+            
+            // If cloud is newer than local (by at least 3 seconds to cover clock discrepancies)
+            if (cloudUpdatedAt > lastSyncTimestamp + 3000) {
+                const file = data.files["focusos_data.json"];
+                if (file && file.content) {
+                    const parsedState = JSON.parse(file.content);
+                    
+                    // Quietly update state
+                    state.points = parsedState.points !== undefined ? parsedState.points : state.points;
+                    state.dailyStats = parsedState.dailyStats || state.dailyStats;
+                    state.schedules = parsedState.schedules || state.schedules;
+                    state.memo = parsedState.memo || state.memo;
+                    
+                    lastSyncTimestamp = cloudUpdatedAt;
+                    saveStateToLocalStorage();
+                    
+                    // Refresh GUI
+                    document.getElementById('memo-textarea').value = state.memo;
+                    selectNewDate(state.selectedDate);
+                    
+                    const ind = document.getElementById('sync-indicator');
+                    if (ind) {
+                        ind.innerText = "云端已同步 (多端对齐)";
+                        ind.className = "text-[10px] text-emerald-500 font-extrabold";
+                    }
+                    showToast('检测到多端更新', '已自动对齐您的云端日程与积分数据。', 'success');
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("Background sync error:", e);
     }
 }
 
@@ -1086,8 +1147,8 @@ function toggleCustomPointsField(show) {
     }
 }
 
-function saveSchedule(e) {
-    e.preventDefault();
+function saveSchedule(event) {
+    event.preventDefault();
     const title = document.getElementById('form-title').value;
     const startTime = document.getElementById('form-start').value;
     const endTime = document.getElementById('form-end').value;
@@ -1462,6 +1523,8 @@ document.addEventListener('visibilitychange', () => {
         if (state.activeTracker && state.activeTracker.type) {
             updateActiveTrackerUI();
         }
+        // Force sync catchup when reopening the browser
+        backgroundSyncCheck();
     }
 });
 
@@ -1505,6 +1568,9 @@ window.onload = function() {
     
     // Trigger Auto Cloud Download on startup
     autoDownloadOnLoad();
+    
+    // Periodically sync check every 30 seconds in the background
+    setInterval(backgroundSyncCheck, 30000);
 }
 </script>
 
