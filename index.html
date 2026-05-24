@@ -157,6 +157,12 @@
                 <div class="absolute inset-y-0 right-0 left-16 pointer-events-none z-10" id="events-overlay">
                     <!-- Absolute-positioned blocks with pointer-events-auto -->
                 </div>
+
+                <!-- Real-time current time indicator (Google Calendar style red line) -->
+                <div id="current-time-indicator" class="absolute left-0 right-0 pointer-events-none z-20 hidden h-[1px]">
+                    <div class="absolute left-[60px] w-2 h-2 rounded-full bg-rose-500 -translate-x-1/2 -translate-y-[3.5px] shadow-sm shadow-rose-500/30"></div>
+                    <div class="ml-16 mr-2 border-t border-rose-500"></div>
+                </div>
             </div>
         </div>
     </section>
@@ -594,6 +600,30 @@ function selectNewDate(targetDate) {
     renderTimelineGrid();
     renderEvents();
     updatePointsUI();
+    updateCurrentTimeIndicator();
+}
+
+// Update real-time red line for today's visual flow
+function updateCurrentTimeIndicator() {
+    const indicator = document.getElementById('current-time-indicator');
+    if (!indicator) return;
+
+    const todayStr = getYYYYMMDD(new Date());
+    const selectedStr = getYYYYMMDD(state.selectedDate);
+
+    // Only show if the selected date is today
+    if (todayStr === selectedStr) {
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const totalHours = hours + (minutes / 60);
+        const topPx = totalHours * 52;
+
+        indicator.style.top = `${topPx}px`;
+        indicator.classList.remove('hidden');
+    } else {
+        indicator.classList.add('hidden');
+    }
 }
 
 // Exact alignment grid generator (Absolute positioning prevents offsets)
@@ -1104,6 +1134,9 @@ window.onload = function() {
     
     // Refresh display
     updateLayoutForTabs();
+
+    // Auto-update current time indicator every 30 seconds
+    setInterval(updateCurrentTimeIndicator, 30000);
 }
 </script>
 
