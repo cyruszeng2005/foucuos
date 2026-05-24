@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ZenFocus - 曾晨阳禅意极简日程与积分系统</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -35,7 +35,16 @@
             }
         }
     </script>
+    
     <style>
+        /* Prevents browser pull-to-refresh on Android while dragging timeline */
+        html, body {
+            overscroll-behavior-y: none;
+            -webkit-tap-highlight-color: transparent;
+            height: 100dvh;
+            width: 100%;
+            overflow: hidden;
+        }
         /* Modern light scrollbar matching macOS style */
         ::-webkit-scrollbar {
             width: 6px;
@@ -53,11 +62,11 @@
         }
         /* Glassmorphism for light theme */
         .glass {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
         }
-        /* No select utility */
+        /* No select utility to prevent blue selection overlay on tap */
         .no-select {
             user-select: none;
             -webkit-user-select: none;
@@ -67,67 +76,98 @@
             overflow: hidden !important;
             touch-action: none;
         }
+        /* Fix for mobile textareas auto-zooming on focus */
+        textarea, input, select {
+            font-size: 16px !important;
+        }
+        @media (min-width: 768px) {
+            textarea, input, select {
+                font-size: 14px !important;
+            }
+        }
+        /* Support safe areas for modern Android / iOS notches */
+        .pb-safe-bottom {
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .pt-safe-top {
+            padding-top: env(safe-area-inset-top, 0px);
+        }
+        
+        /* Interactive touch scale-down effect for custom buttons */
+        .active-scale:active {
+            transform: scale(0.96);
+        }
+        
+        /* Elegant smooth transitions */
+        .fade-transition {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
     </style>
 </head>
-<body class="bg-apple-light text-apple-darkText font-sans h-screen w-screen overflow-hidden flex flex-col justify-between">
+<body class="bg-apple-light text-apple-darkText font-sans flex flex-col justify-between overflow-hidden h-[100dvh] w-full select-none">
 
-<header class="glass border-b border-apple-border px-8 py-3.5 flex justify-between items-center z-10 no-select">
+<header class="glass border-b border-apple-border px-6 md:px-8 py-3.5 flex justify-between items-center z-30 no-select flex-shrink-0 pt-safe-top">
     <div class="flex items-center space-x-3">
         <div class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
-        <span class="text-xs font-semibold tracking-widest text-zinc-500 uppercase">ZenFocus OS</span>
+        <span class="text-xs font-bold tracking-widest text-zinc-500 uppercase">ZenFocus OS</span>
     </div>
-    <div class="text-xs text-apple-muted font-mono font-bold" id="live-clock">
+    <div class="text-xs text-apple-muted font-mono font-extrabold" id="live-clock">
         正在读取系统时间...
     </div>
 </header>
 
-<main class="flex-1 flex overflow-hidden relative">
+<main class="flex-1 flex flex-col md:flex-row overflow-hidden relative w-full">
 
-    <!-- ==================== LEFT HALF: CALENDAR SYSTEM ==================== -->
-    <section class="w-1/2 border-r border-apple-border flex flex-col h-full bg-white select-none">
+    <!-- ==================== LEFT HALF: CALENDAR SYSTEM (Tab 1 on Mobile) ==================== -->
+    <section id="section-calendar" class="w-full md:w-1/2 border-r border-apple-border flex flex-col h-full bg-white select-none transition-all duration-300">
         
         <!-- Apple Premium Light Date Controller -->
-        <div class="p-6 border-b border-apple-border flex flex-col space-y-4 no-select">
+        <div class="p-4 md:p-6 border-b border-apple-border flex flex-col space-y-4 no-select flex-shrink-0">
             <div class="flex items-center justify-between">
                 <!-- Steve Jobs Minimalist Day Pickers -->
                 <div class="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200/50" id="three-day-capsules">
-                    <button onclick="selectRelativeDay(0)" id="btn-day-0" class="px-5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200">今</button>
-                    <button onclick="selectRelativeDay(1)" id="btn-day-1" class="px-5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200">明</button>
-                    <button onclick="selectRelativeDay(2)" id="btn-day-2" class="px-5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200">后</button>
+                    <button onclick="selectRelativeDay(0)" id="btn-day-0" class="px-5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 active-scale">今</button>
+                    <button onclick="selectRelativeDay(1)" id="btn-day-1" class="px-5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 active-scale">明</button>
+                    <button onclick="selectRelativeDay(2)" id="btn-day-2" class="px-5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 active-scale">后</button>
                 </div>
                 
-                <!-- Clickable Date Label with transparent input overlay to allow browser's native trigger without iframe restriction -->
-                <div class="relative cursor-pointer hover:opacity-80 transition-opacity flex items-center space-x-1.5">
+                <!-- Clickable Date Label with transparent input overlay -->
+                <div class="relative cursor-pointer hover:opacity-80 transition-opacity flex items-center space-x-1.5 py-1.5 px-3 rounded-lg hover:bg-zinc-50">
                     <h2 class="text-sm md:text-base font-bold tracking-tight text-apple-darkText flex items-center space-x-1.5">
                         <i class="fa-regular fa-calendar-check text-blue-500"></i>
                         <span id="date-label">正在加载日期...</span>
                     </h2>
                     <i class="fa-solid fa-angle-down text-zinc-400 text-xs mt-0.5"></i>
-                    <!-- This hidden date input completely covers the label, native click will trigger system calendar safely -->
+                    <!-- Hidden date input completely covers the label for native invocation -->
                     <input type="date" id="hidden-date-picker" class="absolute inset-0 w-full h-full opacity-0 pointer-events-auto cursor-pointer z-10" onchange="onDatePickerChange(this)">
                 </div>
             </div>
         </div>
 
         <!-- Google Calendar style Scrollable Timeline Container -->
-        <div class="flex-1 overflow-y-auto relative p-6 bg-gradient-to-b from-white to-zinc-50/50" id="timeline-container">
-            <div class="relative min-h-[1248px] cursor-crosshair" id="timeline-grid" style="height: 1248px;">
+        <div class="flex-1 overflow-y-auto relative p-4 md:p-6 bg-gradient-to-b from-white to-zinc-50/50" id="timeline-container" style="-webkit-overflow-scrolling: touch;">
+            <!-- Guidance tip block specifically for mobile users -->
+            <div class="md:hidden text-[10px] text-zinc-400 font-bold bg-zinc-50 border border-zinc-200/50 rounded-lg p-2.5 mb-3 text-center no-select">
+                <i class="fa-solid fa-fingerprint text-blue-500 mr-1"></i> 提示：上下划动滚动，<b>长按 0.4 秒</b>可锁定并拖拽创建日程
+            </div>
+            
+            <div class="relative min-h-[1248px] cursor-crosshair select-none" id="timeline-grid" style="height: 1248px;">
                 
                 <!-- Timeline Hours Grid lines -->
-                <div class="absolute inset-0 flex flex-col justify-between" id="grid-lines">
-                    <!-- Javascript will inject 24 hourly slot rows with bolder font sizes -->
+                <div class="absolute inset-0 flex flex-col justify-between pointer-events-none" id="grid-lines">
+                    <!-- Javascript will inject 24 hourly slot rows -->
                 </div>
                 
                 <!-- Elegant Apple-style dragging preview block (Ghost select frame) -->
-                <div id="drag-preview" class="absolute left-16 right-2 rounded-xl border border-dashed border-blue-400 bg-blue-50/60 pointer-events-none hidden flex flex-col justify-between p-3.5 z-20 shadow-md shadow-blue-500/5">
+                <div id="drag-preview" class="absolute left-16 right-2 rounded-xl border border-dashed border-blue-400 bg-blue-50/60 pointer-events-none hidden flex flex-col justify-between p-3 z-20 shadow-md shadow-blue-500/5">
                     <div class="flex items-center space-x-1.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
-                        <span id="drag-preview-title" class="text-xs font-bold text-blue-600">框选新建日程...</span>
+                        <span id="drag-preview-title" class="text-[11px] font-bold text-blue-600">框选创建日程...</span>
                     </div>
                     <span id="drag-preview-time" class="text-xs font-mono font-extrabold text-blue-500">00:00 - 00:00</span>
                 </div>
                 
-                <!-- Active events container (overlayed on top, click-through enabled via CSS pointer-events) -->
+                <!-- Active events container (overlayed on top, click-through enabled via CSS pointer-events-none) -->
                 <div class="absolute inset-y-0 right-0 left-16 pointer-events-none z-10" id="events-overlay">
                     <!-- Events will be absolutely positioned here with pointer-events-auto -->
                 </div>
@@ -135,73 +175,73 @@
         </div>
     </section>
 
-    <!-- ==================== RIGHT HALF: OVERVIEW & CONTROLS ==================== -->
-    <section class="w-1/2 flex flex-col h-full bg-apple-light overflow-hidden">
+    <!-- ==================== RIGHT HALF: OVERVIEW & CONTROLS (Tab 2 & 3 on Mobile) ==================== -->
+    <section id="section-right" class="w-full md:w-1/2 flex flex-col h-full bg-apple-light overflow-hidden transition-all duration-300">
         
-        <!-- Right Top Half - Points & Fragmented Time Cards -->
-        <div class="h-1/2 border-b border-apple-border p-8 flex flex-col justify-between bg-white/40">
+        <!-- Right Top Half - Points & Fragmented Time Cards (Tab 2 on Mobile) -->
+        <div id="panel-focus" class="h-1/2 border-b border-apple-border p-6 md:p-8 flex flex-col justify-between bg-white/40 overflow-y-auto md:overflow-visible">
             <!-- Giant Score Display -->
-            <div class="flex flex-col items-center justify-center py-2 text-center">
+            <div class="flex flex-col items-center justify-center py-2 text-center flex-shrink-0">
                 <span class="text-[10px] tracking-widest text-apple-muted font-bold uppercase mb-1">CURRENT INTEGRAL · 当前积分</span>
                 <div class="flex items-baseline space-x-1.5">
-                    <span class="text-6xl font-extrabold tracking-tight text-apple-darkText font-sans transition-all duration-300 ease-out" id="points-display">
+                    <span class="text-5xl md:text-6xl font-extrabold tracking-tight text-apple-darkText font-sans transition-all duration-300 ease-out" id="points-display">
                         0
                     </span>
-                    <span class="text-sm font-bold text-zinc-400 font-mono">PTS</span>
+                    <span class="text-xs font-bold text-zinc-400 font-mono">PTS</span>
                 </div>
                 <!-- Cumulative points stats associated with the selected day -->
-                <div class="mt-2.5 flex items-center space-x-4 text-xs text-zinc-500 font-bold">
+                <div class="mt-2 flex items-center space-x-4 text-[11px] md:text-xs text-zinc-500 font-bold">
                     <span id="points-earned-day" class="flex items-center"><i class="fa-solid fa-arrow-trend-up text-emerald-500 mr-1"></i>今日获得: +0</span>
-                    <span class="w-1.5 h-1.5 rounded-full bg-zinc-200"></span>
+                    <span class="w-1 h-1 rounded-full bg-zinc-200"></span>
                     <span id="points-spent-day" class="flex items-center"><i class="fa-solid fa-arrow-trend-down text-rose-500 mr-1"></i>今日消耗: -0</span>
                 </div>
             </div>
 
             <!-- Two Minimalist Fragmented Time Grid Cards -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-4 mt-4 md:mt-0">
                 <!-- STUDY CARD -->
-                <div id="card-study" class="bg-white border border-apple-border rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group hover:shadow-sm hover:border-blue-500/30">
+                <div id="card-study" class="bg-white border border-apple-border rounded-2xl p-4 md:p-5 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group hover:shadow-sm hover:border-blue-500/30">
                     <div id="pulse-study" class="absolute inset-0 bg-blue-500/5 opacity-0 pointer-events-none transition-all duration-300"></div>
                     <div class="flex justify-between items-start z-10">
-                        <div class="p-2.5 bg-blue-50 rounded-xl text-blue-600">
-                            <i class="fa-solid fa-graduation-cap text-lg"></i>
+                        <div class="p-2 bg-blue-50 rounded-xl text-blue-600">
+                            <i class="fa-solid fa-graduation-cap text-base"></i>
                         </div>
-                        <span class="text-[10px] font-mono font-extrabold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-md">
-                            +1 积分/分
+                        <span class="text-[9px] md:text-[10px] font-mono font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                            +1 分/分
                         </span>
                     </div>
                     
-                    <div class="mt-5 z-10">
-                        <h4 class="text-sm font-bold text-zinc-800">碎片学习</h4>
-                        <p class="text-xs text-apple-muted mt-0.5" id="timer-study-desc">待开启专注</p>
-                        <div class="text-3xl font-mono font-extrabold text-blue-600 mt-1 hidden animate-pulse" id="timer-study-display">00:00</div>
+                    <div class="mt-4 md:mt-5 z-10">
+                        <h4 class="text-xs md:text-sm font-bold text-zinc-800">碎片学习</h4>
+                        <p class="text-[11px] text-apple-muted mt-0.5" id="timer-study-desc">待开启专注</p>
+                        <div class="text-2xl md:text-3xl font-mono font-extrabold text-blue-600 mt-1 hidden animate-pulse" id="timer-study-display">00:00</div>
                     </div>
 
-                    <button id="btn-study" onclick="toggleTracker('study')" class="mt-4 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 active:scale-98 text-zinc-800 text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5">
+                    <button id="btn-study" onclick="toggleTracker('study')" class="mt-3 md:mt-4 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 active:scale-95 text-zinc-800 text-xs md:text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 active-scale">
                         <i class="fa-solid fa-play text-[10px]"></i>
                         <span>开始学习</span>
                     </button>
                 </div>
 
                 <!-- PLAY CARD -->
-                <div id="card-play" class="bg-white border border-apple-border rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group hover:shadow-sm hover:border-rose-500/30">
+                <div id="card-play" class="bg-white border border-apple-border rounded-2xl p-4 md:p-5 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group hover:shadow-sm hover:border-rose-500/30">
                     <div id="pulse-play" class="absolute inset-0 bg-rose-500/5 opacity-0 pointer-events-none transition-all duration-300"></div>
                     <div class="flex justify-between items-start z-10">
-                        <div class="p-2.5 bg-rose-50 rounded-xl text-rose-600">
-                            <i class="fa-solid fa-gamepad text-lg"></i>
+                        <div class="p-2 bg-rose-50 rounded-xl text-rose-600">
+                            <i class="fa-solid fa-gamepad text-base"></i>
                         </div>
-                        <span class="text-[10px] font-mono font-extrabold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-md">
-                            -5 积分/分
+                        <span class="text-[9px] md:text-[10px] font-mono font-extrabold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">
+                            -5 分/分
                         </span>
                     </div>
                     
-                    <div class="mt-5 z-10">
-                        <h4 class="text-sm font-bold text-zinc-800">娱乐放松</h4>
-                        <p class="text-xs text-apple-muted mt-0.5" id="timer-play-desc">待开启放松</p>
-                        <div class="text-3xl font-mono font-extrabold text-rose-600 mt-1 hidden animate-pulse" id="timer-play-display">00:00</div>
+                    <div class="mt-4 md:mt-5 z-10">
+                        <h4 class="text-xs md:text-sm font-bold text-zinc-800">娱乐放松</h4>
+                        <p class="text-[11px] text-apple-muted mt-0.5" id="timer-play-desc">待开启放松</p>
+                        <div class="text-2xl md:text-3xl font-mono font-extrabold text-rose-600 mt-1 hidden animate-pulse" id="timer-play-display">00:00</div>
                     </div>
 
-                    <button id="btn-play" onclick="toggleTracker('play')" class="mt-4 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 active:scale-98 text-zinc-800 text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5">
+                    <button id="btn-play" onclick="toggleTracker('play')" class="mt-3 md:mt-4 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 active:scale-95 text-zinc-800 text-xs md:text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 active-scale">
                         <i class="fa-solid fa-play text-[10px]"></i>
                         <span>开始放松</span>
                     </button>
@@ -209,9 +249,9 @@
             </div>
         </div>
 
-        <!-- Right Bottom Half - Zen Rich Text Note -->
-        <div class="h-1/2 p-8 flex flex-col justify-between bg-white/20">
-            <div class="flex items-center justify-between mb-3 no-select">
+        <!-- Right Bottom Half - Zen Rich Text Note (Tab 3 on Mobile) -->
+        <div id="panel-memo" class="h-1/2 p-6 md:p-8 flex flex-col justify-between bg-white/20">
+            <div class="flex items-center justify-between mb-3 no-select flex-shrink-0">
                 <h3 class="text-xs font-bold tracking-wider text-zinc-500 uppercase flex items-center space-x-2">
                     <i class="fa-regular fa-note-sticky text-amber-500"></i>
                     <span>禅意随笔 · 备忘录</span>
@@ -220,21 +260,37 @@
             </div>
             
             <div class="flex-1 relative">
-                <textarea id="memo-textarea" placeholder="在此处记下今天的感悟、长期规划或系统待办..." class="w-full h-full bg-white border border-apple-border rounded-xl p-4 text-sm text-zinc-800 placeholder-zinc-400 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/50 resize-none leading-relaxed transition-all duration-200"></textarea>
+                <textarea id="memo-textarea" placeholder="在此处记下今天的感悟、长期规划或系统待办..." class="w-full h-full bg-white border border-apple-border rounded-xl p-4 text-[16px] md:text-sm text-zinc-800 placeholder-zinc-400 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/50 resize-none leading-relaxed transition-all duration-200" style="-webkit-overflow-scrolling: touch;"></textarea>
             </div>
         </div>
     </section>
 </main>
 
+<!-- Mobile-only Elegant Apple Style Bottom Navigation Bar with Notch Padding support -->
+<nav id="mobile-nav-bar" class="md:hidden bg-white/95 backdrop-blur-md border-t border-apple-border flex justify-around items-center py-3 px-4 z-30 pb-safe-bottom flex-shrink-0">
+    <button onclick="switchMobileTab('calendar')" id="nav-btn-calendar" class="flex flex-col items-center space-y-1 text-blue-500 transition-all duration-150 py-1 px-3 rounded-lg active:bg-zinc-100">
+        <i class="fa-regular fa-calendar-days text-xl"></i>
+        <span class="text-[10px] font-bold">禅意日程</span>
+    </button>
+    <button onclick="switchMobileTab('focus')" id="nav-btn-focus" class="flex flex-col items-center space-y-1 text-zinc-400 transition-all duration-150 py-1 px-3 rounded-lg active:bg-zinc-100">
+        <i class="fa-solid fa-chart-simple text-xl"></i>
+        <span class="text-[10px] font-bold">能量中心</span>
+    </button>
+    <button onclick="switchMobileTab('memo')" id="nav-btn-memo" class="flex flex-col items-center space-y-1 text-zinc-400 transition-all duration-150 py-1 px-3 rounded-lg active:bg-zinc-100">
+        <i class="fa-solid fa-pen-nib text-xl"></i>
+        <span class="text-[10px] font-bold">禅意随笔</span>
+    </button>
+</nav>
+
 <!-- ==================== APPLE MINIMAL MODAL: CREATE CALENDAR ITEM ==================== -->
-<div id="modal-container" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+<div id="modal-container" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 px-4">
     <div id="modal-card" class="bg-white border border-apple-border w-full max-w-md rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 transform scale-95 p-6">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-base font-bold text-apple-darkText flex items-center space-x-2">
                 <i class="fa-solid fa-calendar-plus text-blue-500"></i>
                 <span>新增日程事项</span>
             </h3>
-            <button onclick="closeModal()" class="text-zinc-400 hover:text-zinc-600 transition-colors duration-150">
+            <button onclick="closeModal()" class="text-zinc-400 hover:text-zinc-600 transition-colors duration-150 p-2 rounded-full hover:bg-zinc-100 active-scale">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
         </div>
@@ -243,18 +299,18 @@
             <!-- Title -->
             <div>
                 <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">事项名称</label>
-                <input required type="text" id="form-title" placeholder="例如：深度思考、健身慢跑、代码重构..." class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500">
+                <input required type="text" id="form-title" placeholder="例如：深度思考、健身慢跑、代码重构..." class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2.5 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500">
             </div>
 
             <!-- Times -->
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">开始时间</label>
-                    <input required type="time" id="form-start" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2 text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
+                    <input required type="time" id="form-start" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2.5 text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">结束时间</label>
-                    <input required type="time" id="form-end" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2 text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
+                    <input required type="time" id="form-end" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2.5 text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
                 </div>
             </div>
 
@@ -264,21 +320,21 @@
                 <div class="grid grid-cols-3 gap-2">
                     <!-- Blue: Accumulator -->
                     <label class="flex flex-col items-center justify-center p-3 border border-apple-border rounded-xl cursor-pointer hover:bg-zinc-50 transition-all duration-150 relative">
-                        <input type="radio" name="type-color" value="blue" checked class="absolute top-2 right-2 accent-blue-500" onclick="toggleCustomPointsField(false)">
+                        <input type="radio" name="type-color" value="blue" checked class="absolute top-2 right-2 accent-blue-500 w-4 h-4" onclick="toggleCustomPointsField(false)">
                         <span class="w-4 h-4 rounded-full bg-blue-500 mb-1"></span>
                         <span class="text-[11px] font-bold text-blue-600">蓝色</span>
-                        <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">+1 积分/分</span>
+                        <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">+1 分/分</span>
                     </label>
                     <!-- Red: Consumer -->
                     <label class="flex flex-col items-center justify-center p-3 border border-apple-border rounded-xl cursor-pointer hover:bg-zinc-50 transition-all duration-150 relative">
-                        <input type="radio" name="type-color" value="red" class="absolute top-2 right-2 accent-rose-500" onclick="toggleCustomPointsField(false)">
+                        <input type="radio" name="type-color" value="red" class="absolute top-2 right-2 accent-rose-500 w-4 h-4" onclick="toggleCustomPointsField(false)">
                         <span class="w-4 h-4 rounded-full bg-rose-500 mb-1"></span>
                         <span class="text-[11px] font-bold text-rose-600">红色</span>
-                        <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">-5 积分/分</span>
+                        <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">-5 分/分</span>
                     </label>
                     <!-- Green: Custom -->
                     <label class="flex flex-col items-center justify-center p-3 border border-apple-border rounded-xl cursor-pointer hover:bg-zinc-50 transition-all duration-150 relative">
-                        <input type="radio" name="type-color" value="green" class="absolute top-2 right-2 accent-emerald-500" onclick="toggleCustomPointsField(true)">
+                        <input type="radio" name="type-color" value="green" class="absolute top-2 right-2 accent-emerald-500 w-4 h-4" onclick="toggleCustomPointsField(true)">
                         <span class="w-4 h-4 rounded-full bg-emerald-500 mb-1"></span>
                         <span class="text-[11px] font-bold text-emerald-600">绿色</span>
                         <span class="text-[9px] text-zinc-400 mt-0.5 font-bold">自定义加减</span>
@@ -286,18 +342,18 @@
                 </div>
             </div>
 
-            <!-- Custom Points Input (Only visible for Green selection) -->
-            <div id="custom-points-wrapper" class="hidden animate-fadeIn">
+            <!-- Custom Points Input -->
+            <div id="custom-points-wrapper" class="hidden">
                 <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">自定义分数 (正数增加，负数扣除)</label>
-                <input type="number" id="form-custom-points" placeholder="如: 30 或 -20" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2 text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
+                <input type="number" id="form-custom-points" placeholder="如: 30 或 -20" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2.5 text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
             </div>
 
             <!-- Actions -->
             <div class="pt-4 flex space-x-3">
-                <button type="button" onclick="closeModal()" class="w-1/2 py-2.5 border border-apple-border rounded-lg text-sm font-bold text-zinc-500 hover:bg-zinc-50 transition-colors duration-150">
+                <button type="button" onclick="closeModal()" class="w-1/2 py-3 border border-apple-border rounded-lg text-sm font-bold text-zinc-500 hover:bg-zinc-50 transition-colors duration-150 active-scale">
                     取消
                 </button>
-                <button type="submit" class="w-1/2 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-lg text-sm font-bold transition-all duration-150 shadow-sm shadow-blue-600/10">
+                <button type="submit" class="w-1/2 py-3 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-lg text-sm font-bold transition-all duration-150 shadow-sm shadow-blue-600/10 active-scale">
                     保存事项
                 </button>
             </div>
@@ -306,10 +362,10 @@
 </div>
 
 <!-- ==================== APPLE CUSTOM TOAST SYSTEM ==================== -->
-<div id="toast" class="fixed bottom-6 right-6 glass border border-apple-border rounded-xl px-5 py-3.5 shadow-xl flex items-center space-x-3 transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none z-50">
+<div id="toast" class="fixed bottom-24 md:bottom-6 right-6 glass border border-apple-border rounded-xl px-5 py-3.5 shadow-xl flex items-center space-x-3 transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none z-50">
     <div id="toast-icon" class="p-1.5 rounded-lg"></div>
     <div class="flex flex-col">
-        <span id="toast-title" class="text-xs font-bold text-apple-darkText font-bold">通知</span>
+        <span id="toast-title" class="text-xs font-bold text-apple-darkText">通知</span>
         <span id="toast-message" class="text-xs text-zinc-500 mt-0.5 font-bold">操作已成功执行</span>
     </div>
 </div>
@@ -318,7 +374,7 @@
 <script>
 // Global App State
 let state = {
-    selectedDate: new Date(), // Standard JS Date Object represent active date
+    selectedDate: new Date(), 
     points: 0,                // Cumulative score (cumulative, across days)
     dailyStats: {},          // Indexed by 'YYYY-MM-DD' -> { earned: 0, spent: 0 }
     schedules: {},           // Indexed by Date string 'YYYY-MM-DD'
@@ -326,7 +382,8 @@ let state = {
         study: { active: false, startTime: null, timerId: null, secondsElapsed: 0 },
         play: { active: false, startTime: null, timerId: null, secondsElapsed: 0 }
     },
-    memo: ""
+    memo: "",
+    activeMobileTab: 'calendar' // 'calendar' | 'focus' | 'memo'
 };
 
 // Drag-to-create tracking variables
@@ -334,12 +391,19 @@ let isDragging = false;
 let dragStartHour = null;
 let dragEndHour = null;
 
-// Convert JS Date to localized YYYY-MM-DD string safely avoiding UTC shifts
+// Mobile-specific touch tracking for scroll prevention & long-press detection
+let touchTimer = null;
+let isTouchDrawing = false;
+let touchStartY = 0;
+let touchStartX = 0;
+const LONG_PRESS_DELAY = 400; // ms to trigger schedule drawing instead of scrolling
+
+// Convert JS Date to YYYY-MM-DD
 function getYYYYMMDD(dateObj) {
-    return dateObj.toLocaleDateString('sv'); // Sweden locale output YYYY-MM-DD
+    return dateObj.toLocaleDateString('sv'); 
 }
 
-// Format nice display string: "5月24日 (周日)"
+// Format date display: "5月24日 (周日)"
 function getDisplayDateString(dateObj) {
     const months = dateObj.getMonth() + 1;
     const date = dateObj.getDate();
@@ -349,7 +413,7 @@ function getDisplayDateString(dateObj) {
 
 // Local Storage Handlers
 function saveStateToLocalStorage() {
-    localStorage.setItem('zenfocus_state_v3_light', JSON.stringify({
+    localStorage.setItem('zenfocus_state_v4_light', JSON.stringify({
         points: state.points,
         dailyStats: state.dailyStats,
         schedules: state.schedules,
@@ -358,7 +422,7 @@ function saveStateToLocalStorage() {
 }
 
 function loadStateFromLocalStorage() {
-    const stored = localStorage.getItem('zenfocus_state_v3_light');
+    const stored = localStorage.getItem('zenfocus_state_v4_light');
     if (stored) {
         try {
             const parsed = JSON.parse(stored);
@@ -369,31 +433,89 @@ function loadStateFromLocalStorage() {
         } catch (e) {
             console.error("Localstorage restoration error:", e);
         }
-    } else {
-        // Fallback or migration check from legacy key versions
-        const legacy = localStorage.getItem('zenfocus_state_unlimited_dates');
-        if (legacy) {
-            try {
-                const parsed = JSON.parse(legacy);
-                state.points = parsed.points || 0;
-                state.schedules = parsed.schedules || {};
-                state.memo = parsed.memo || "";
-                
-                // Convert simple legacy stats to dates index
-                const todayStr = getYYYYMMDD(new Date());
-                state.dailyStats[todayStr] = {
-                    earned: parsed.dailyEarned || 0,
-                    spent: parsed.dailySpent || 0
-                };
-                saveStateToLocalStorage();
-            } catch (e) {
-                console.error("Legacy migration error:", e);
-            }
-        }
     }
 }
 
-// Elegant notifications
+// Dynamic Responsive layout updater
+function switchMobileTab(tab) {
+    state.activeMobileTab = tab;
+    updateLayoutForTabs();
+}
+
+function updateLayoutForTabs() {
+    const isMobile = window.innerWidth < 768;
+    
+    // Grab key elements
+    const sectionCalendar = document.getElementById('section-calendar');
+    const sectionRight = document.getElementById('section-right');
+    const panelFocus = document.getElementById('panel-focus');
+    const panelMemo = document.getElementById('panel-memo');
+    
+    const btnNavCalendar = document.getElementById('nav-btn-calendar');
+    const btnNavFocus = document.getElementById('nav-btn-focus');
+    const btnNavMemo = document.getElementById('nav-btn-memo');
+
+    if (!isMobile) {
+        // Reset to PC split screen
+        sectionCalendar.classList.remove('hidden');
+        sectionCalendar.classList.add('flex');
+        sectionRight.classList.remove('hidden');
+        sectionRight.classList.add('flex');
+        
+        panelFocus.classList.remove('hidden');
+        panelFocus.classList.add('h-1/2');
+        panelMemo.classList.remove('hidden');
+        panelMemo.classList.add('h-1/2');
+        return;
+    }
+
+    // Toggle active classes on bottom nav buttons
+    [btnNavCalendar, btnNavFocus, btnNavMemo].forEach(btn => {
+        btn.className = "flex flex-col items-center space-y-1 text-zinc-400 transition-all duration-150 py-1 px-3 rounded-lg active:bg-zinc-100";
+    });
+
+    // Mobile Viewport Logic
+    if (state.activeMobileTab === 'calendar') {
+        sectionCalendar.classList.remove('hidden');
+        sectionCalendar.classList.add('flex');
+        sectionRight.classList.add('hidden');
+        
+        btnNavCalendar.className = "flex flex-col items-center space-y-1 text-blue-500 transition-all duration-150 py-1 px-3 rounded-lg bg-zinc-100 font-extrabold";
+    } 
+    else if (state.activeMobileTab === 'focus') {
+        sectionCalendar.classList.add('hidden');
+        sectionRight.classList.remove('hidden');
+        sectionRight.classList.add('flex');
+        
+        panelFocus.classList.remove('hidden', 'h-1/2');
+        panelFocus.classList.add('h-full');
+        panelMemo.classList.add('hidden');
+        
+        btnNavFocus.className = "flex flex-col items-center space-y-1 text-blue-500 transition-all duration-150 py-1 px-3 rounded-lg bg-zinc-100 font-extrabold";
+    } 
+    else if (state.activeMobileTab === 'memo') {
+        sectionCalendar.classList.add('hidden');
+        sectionRight.classList.remove('hidden');
+        sectionRight.classList.add('flex');
+        
+        panelFocus.classList.add('hidden');
+        panelMemo.classList.remove('hidden', 'h-1/2');
+        panelMemo.classList.add('h-full');
+        
+        btnNavMemo.className = "flex flex-col items-center space-y-1 text-blue-500 transition-all duration-150 py-1 px-3 rounded-lg bg-zinc-100 font-extrabold";
+        
+        // Soft delay to ensure textarea renders beautifully before focused
+        setTimeout(() => {
+            document.getElementById('memo-textarea').focus();
+        }, 120);
+    }
+}
+
+// Window resizing listener
+window.addEventListener('resize', () => {
+    updateLayoutForTabs();
+});
+
 function showToast(title, message, type = 'info') {
     const toast = document.getElementById('toast');
     const toastIcon = document.getElementById('toast-icon');
@@ -424,7 +546,6 @@ function showToast(title, message, type = 'info') {
     }, 3000);
 }
 
-// Live clock (macOS format)
 function initClock() {
     const update = () => {
         const d = new Date();
@@ -434,7 +555,6 @@ function initClock() {
     setInterval(update, 1000);
 }
 
-// Get day-specific stats safely
 function getDayStatsObj(dateStr) {
     if (!state.dailyStats[dateStr]) {
         state.dailyStats[dateStr] = { earned: 0, spent: 0 };
@@ -442,13 +562,12 @@ function getDayStatsObj(dateStr) {
     return state.dailyStats[dateStr];
 }
 
-// Update UI numerical metrics
 function updatePointsUI() {
-    // Cumulative points
+    // Current accumulated points display
     const element = document.getElementById('points-display');
     element.innerText = Math.round(state.points);
     
-    // Day-specific points
+    // Day-specific statistics display
     const dateKey = getYYYYMMDD(state.selectedDate);
     const dayStats = getDayStatsObj(dateKey);
 
@@ -456,7 +575,6 @@ function updatePointsUI() {
     document.getElementById('points-spent-day').innerHTML = `<i class="fa-solid fa-arrow-trend-down text-rose-500 mr-1"></i>今日消耗: -${Math.abs(Math.round(dayStats.spent))}`;
 }
 
-// Day Navigation Capsules Controller (今 明 后)
 function selectRelativeDay(offset) {
     const d = new Date();
     d.setDate(d.getDate() + offset);
@@ -469,24 +587,21 @@ function onDatePickerChange(input) {
     }
 }
 
-// Core Date Switcher
 function selectNewDate(targetDate) {
     state.selectedDate = new Date(targetDate);
-    
     const targetStr = getYYYYMMDD(state.selectedDate);
     
-    // Refresh Top UI Date Indicators
+    // Refresh date elements
     document.getElementById('date-label').innerText = getDisplayDateString(state.selectedDate);
     document.getElementById('hidden-date-picker').value = targetStr;
 
-    // Highlight proper capsule button (0=Today, 1=Tomorrow, 2=Day After)
+    // Capsule highlight logic
     const todayStr = getYYYYMMDD(new Date());
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = getYYYYMMDD(tomorrow);
     const dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
     const dayAfterStr = getYYYYMMDD(dayAfter);
 
-    // Reset styles
     const btn0 = document.getElementById('btn-day-0');
     const btn1 = document.getElementById('btn-day-1');
     const btn2 = document.getElementById('btn-day-2');
@@ -503,7 +618,6 @@ function selectNewDate(targetDate) {
     updatePointsUI();
 }
 
-// Render hourly indicators on background grid
 function renderTimelineGrid() {
     const gridLines = document.getElementById('grid-lines');
     gridLines.innerHTML = '';
@@ -512,25 +626,23 @@ function renderTimelineGrid() {
         const timeStr = `${String(i).padStart(2, '0')}:00`;
         const slotDiv = document.createElement('div');
         
-        slotDiv.className = "relative flex items-center h-[52px] border-b border-zinc-100/80 transition-colors duration-150 pointer-events-none";
+        slotDiv.className = "relative flex items-center h-[52px] border-b border-zinc-100 transition-colors duration-150 pointer-events-none";
         slotDiv.style.top = `${i * 52}px`;
         
         slotDiv.innerHTML = `
-            <span class="absolute left-0 text-xs md:text-sm font-mono font-extrabold text-zinc-500/80 select-none">${timeStr}</span>
-            <div class="ml-16 w-full h-[1px] bg-zinc-100/60"></div>
+            <span class="absolute left-0 text-xs md:text-sm font-extrabold text-zinc-600 select-none">${timeStr}</span>
+            <div class="ml-16 w-full h-[1px] bg-zinc-100"></div>
         `;
         gridLines.appendChild(slotDiv);
     }
 }
 
-// Converting decimal hours to HH:MM format
 function decimalToTimeStr(decimal) {
     const h = Math.floor(decimal);
     const m = Math.round((decimal - h) * 60);
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-// Converting HH:MM representation to pixel distances
 function timeToPixels(timeStr) {
     const parts = timeStr.split(':');
     const hours = parseInt(parts[0], 10);
@@ -542,7 +654,7 @@ function timeToPixels(timeStr) {
 function initDragToCreateEngine() {
     const grid = document.getElementById('timeline-grid');
     
-    // Mouse Event Listeners
+    // MOUSE LISTENERS (For Desktop - Instant response on click & drag)
     grid.addEventListener('mousedown', (e) => {
         if (e.button !== 0 || e.target.closest('.pointer-events-auto')) return;
         
@@ -560,25 +672,60 @@ function initDragToCreateEngine() {
         window.addEventListener('mouseup', handleMouseUp);
     });
 
-    // Touch Event Listeners for Tablets / Phones
+    // TOUCH LISTENERS (For Android & Mobile - Press & Hold 0.4s to lock scroll and draw)
     grid.addEventListener('touchstart', (e) => {
         if (e.target.closest('.pointer-events-auto')) return;
         
         const touch = e.touches[0];
         const rect = grid.getBoundingClientRect();
-        const y = touch.clientY - rect.top;
+        touchStartY = touch.clientY;
+        touchStartX = touch.clientX;
+        
+        const y = touchStartY - rect.top;
         const hourDecimal = y / 52;
         
-        dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
-        dragEndHour = dragStartHour;
-        isDragging = true;
+        // Clear any leftover timer
+        if (touchTimer) clearTimeout(touchTimer);
         
-        updateDragPreview();
-        document.body.classList.add('no-scroll');
-        
-        grid.addEventListener('touchmove', handleTouchMove, { passive: false });
-        grid.addEventListener('touchend', handleTouchEnd);
+        // Start a 400ms delay timer before converting scroll to drag-draw
+        touchTimer = setTimeout(() => {
+            // Android Haptic Vibration feedback to notify the user drawing mode is activated
+            if (navigator.vibrate) {
+                navigator.vibrate(40);
+            }
+            
+            dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
+            dragEndHour = dragStartHour;
+            isTouchDrawing = true;
+            
+            updateDragPreview();
+            document.body.classList.add('no-scroll'); // Locks body scroll completely
+            
+            grid.addEventListener('touchmove', handleTouchMove, { passive: false });
+            grid.addEventListener('touchend', handleTouchEnd);
+        }, LONG_PRESS_DELAY);
     }, { passive: true });
+
+    // Cancel timer if user scrolls vertically before 400ms is hit
+    grid.addEventListener('touchmove', (e) => {
+        if (!isTouchDrawing && touchTimer) {
+            const touch = e.touches[0];
+            const moveY = Math.abs(touch.clientY - touchStartY);
+            const moveX = Math.abs(touch.clientX - touchStartX);
+            // If dragging more than 8 pixels, cancel the drawing trigger, it is a scroll
+            if (moveY > 8 || moveX > 8) {
+                clearTimeout(touchTimer);
+                touchTimer = null;
+            }
+        }
+    }, { passive: true });
+
+    grid.addEventListener('touchend', () => {
+        if (touchTimer) {
+            clearTimeout(touchTimer);
+            touchTimer = null;
+        }
+    });
 }
 
 function handleMouseMove(e) {
@@ -603,8 +750,8 @@ function handleMouseUp(e) {
 }
 
 function handleTouchMove(e) {
-    if (!isDragging) return;
-    e.preventDefault();
+    if (!isTouchDrawing) return;
+    e.preventDefault(); // Lock browser scrolling gesture
     
     const touch = e.touches[0];
     const grid = document.getElementById('timeline-grid');
@@ -617,8 +764,8 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd(e) {
-    if (!isDragging) return;
-    isDragging = false;
+    if (!isTouchDrawing) return;
+    isTouchDrawing = false;
     
     document.body.classList.remove('no-scroll');
     const grid = document.getElementById('timeline-grid');
@@ -652,6 +799,7 @@ function finalizeDragSelection() {
     let start = Math.min(dragStartHour, dragEndHour);
     let end = Math.max(dragStartHour, dragEndHour);
     
+    // Default to 1 hour range if clicked quickly
     if (end - start < 0.25) {
         end = start + 1.0;
         if (end > 24) {
@@ -737,7 +885,6 @@ function saveSchedule(e) {
     showToast('日程已创建', `成功添加 "${title}" 到时间线。`, 'success');
 }
 
-// Render actual schedules for the currently selected date string
 function renderEvents() {
     const container = document.getElementById('events-overlay');
     container.innerHTML = '';
@@ -748,7 +895,7 @@ function renderEvents() {
     list.forEach(evt => {
         const topPx = timeToPixels(evt.start);
         const endPx = timeToPixels(evt.end);
-        const heightPx = Math.max(endPx - topPx, 44);
+        const heightPx = Math.max(endPx - topPx, 50); // Slightly enlarged for touch targets
 
         const card = document.createElement('div');
         
@@ -773,12 +920,14 @@ function renderEvents() {
 
         card.innerHTML = `
             <div class="flex items-start justify-between w-full h-full">
-                <!-- Left Details -->
-                <div class="flex items-start space-x-2.5 overflow-hidden h-full">
-                    <input type="checkbox" ${evt.completed ? 'checked' : ''} onclick="toggleEventCompletion('${evt.id}', event)" class="mt-0.5 w-4.5 h-4.5 rounded border-zinc-300 text-blue-600 focus:ring-0 cursor-pointer accent-blue-600">
+                <!-- Left Details with optimized touch paddings -->
+                <div class="flex items-start space-x-3 overflow-hidden h-full">
+                    <div class="flex items-center justify-center p-1">
+                        <input type="checkbox" ${evt.completed ? 'checked' : ''} onclick="toggleEventCompletion('${evt.id}', event)" class="w-6 h-6 rounded border-zinc-300 text-blue-600 focus:ring-0 cursor-pointer accent-blue-600 active-scale">
+                    </div>
                     <div class="flex flex-col overflow-hidden">
                         <span class="text-xs md:text-sm font-bold truncate ${evt.completed ? 'text-zinc-400' : 'text-zinc-800'}">${evt.title}</span>
-                        <span class="text-[11px] md:text-xs font-mono font-extrabold text-zinc-500/90 mt-0.5">${evt.start} - ${evt.end} (${mins}分)</span>
+                        <span class="text-[11px] md:text-xs font-mono font-extrabold text-zinc-500/95 mt-0.5">${evt.start} - ${evt.end} (${mins}分)</span>
                     </div>
                 </div>
                 
@@ -787,7 +936,8 @@ function renderEvents() {
                     <span class="text-[10px] font-mono font-extrabold px-1.5 py-0.5 rounded ${evt.completed ? 'bg-zinc-200 text-zinc-400' : getBadgeThemeClasses(evt.color)}">
                         ${ptsHelper}
                     </span>
-                    <button onclick="deleteEvent('${evt.id}', event)" class="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-500 text-[12px] transition-opacity duration-150 p-1">
+                    <!-- Multi-device Trash Trigger -->
+                    <button onclick="deleteEvent('${evt.id}', event)" class="opacity-100 md:opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-500 text-[14px] p-2 transition-opacity duration-150 active-scale">
                         <i class="fa-regular fa-trash-can"></i>
                     </button>
                 </div>
@@ -850,20 +1000,19 @@ function toggleEventCompletion(id, event) {
         state.points += scoreDelta;
         if (scoreDelta >= 0) {
             dayStats.earned += scoreDelta;
-            showToast('任务开启完成', `已结算，增加积分 +${scoreDelta}`, 'success');
+            showToast('任务已完成', `已结算，增加积分 +${scoreDelta}`, 'success');
         } else {
             dayStats.spent += scoreDelta;
-            showToast('任务消耗完成', `已扣除，抵消积分 ${scoreDelta}`, 'warning');
+            showToast('放松任务执行完成', `已扣除，消耗积分 ${scoreDelta}`, 'warning');
         }
     } else {
-        // Rollback
         state.points -= scoreDelta;
         if (scoreDelta >= 0) {
             dayStats.earned -= scoreDelta;
-            showToast('撤销日程完成', `扣回已获积分 -${scoreDelta}`, 'info');
+            showToast('撤销日程', `扣回已获积分 -${scoreDelta}`, 'info');
         } else {
             dayStats.spent -= scoreDelta;
-            showToast('撤销日程完成', `退还消耗积分 +${Math.abs(scoreDelta)}`, 'info');
+            showToast('撤销日程', `退还已消耗积分 +${Math.abs(scoreDelta)}`, 'info');
         }
     }
 
@@ -903,12 +1052,12 @@ function deleteEvent(id, event) {
 
 function toggleTracker(type) {
     const isRunning = state.trackers[type].active;
-    const todayStr = getYYYYMMDD(new Date()); // Tracker always records to the physical today!
+    const todayStr = getYYYYMMDD(new Date()); 
     
     if (!isRunning) {
         const otherType = type === 'study' ? 'play' : 'study';
         if (state.trackers[otherType].active) {
-            toggleTracker(otherType); // Autoclose other tracker
+            toggleTracker(otherType); 
         }
 
         state.trackers[type].active = true;
@@ -923,7 +1072,7 @@ function toggleTracker(type) {
         
         const btn = document.getElementById(`btn-${type}`);
         btn.innerHTML = `<i class="fa-solid fa-stop text-[10px]"></i> <span>停止计时</span>`;
-        btn.className = "mt-4 w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 shadow-sm";
+        btn.className = "mt-3 md:mt-4 w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs md:text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 shadow-sm active-scale";
 
         state.trackers[type].timerId = setInterval(() => {
             state.trackers[type].secondsElapsed++;
@@ -947,7 +1096,7 @@ function toggleTracker(type) {
             updatePointsUI();
         }, 1000);
 
-        showToast(type === 'study' ? '开始深度专注' : '开始放松时光', '积分已挂接，正在实时累积/扣除。', 'success');
+        showToast(type === 'study' ? '开始深度专注' : '开始放松时光', '积分正在实时累积/扣除。', 'success');
     } else {
         clearInterval(state.trackers[type].timerId);
         
@@ -972,20 +1121,19 @@ function toggleTracker(type) {
 
         const btn = document.getElementById(`btn-${type}`);
         btn.innerHTML = `<i class="fa-solid fa-play text-[10px]"></i> <span>开始${type === 'study' ? '学习' : '放松'}</span>`;
-        btn.className = "mt-4 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5";
+        btn.className = "mt-3 md:mt-4 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs md:text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 active-scale";
 
         saveStateToLocalStorage();
         updatePointsUI();
 
         showToast(
             '活动阶段结束', 
-            `持续计时 ${finalMins} 分钟。积分净变动：${totalImpact >= 0 ? '+' : ''}${totalImpact}`, 
+            `持续计时 ${finalMins} 分钟。积分变动：${totalImpact >= 0 ? '+' : ''}${totalImpact}`, 
             type === 'study' ? 'success' : 'warning'
         );
     }
 }
 
-// Memo system auto-saves
 function initMemoController() {
     const memo = document.getElementById('memo-textarea');
     memo.value = state.memo;
@@ -1008,9 +1156,12 @@ function initMemoController() {
 window.onload = function() {
     loadStateFromLocalStorage();
     initClock();
-    selectNewDate(new Date()); // Auto focus today
+    selectNewDate(new Date()); 
     initDragToCreateEngine();
     initMemoController();
+    
+    // Auto-detect responsive states on first boot
+    updateLayoutForTabs();
 }
 </script>
 
