@@ -1130,8 +1130,8 @@ function initInteractiveScheduleEngine() {
         const clickX = e.clientX - rect.left;
         if (clickX < 64) return; // Ignore dragging on the left label track
 
-        // Fix offset calculation with container.scrollTop
-        const y = e.clientY - rect.top + container.scrollTop;
+        // Precise calculation relative to grid bounds (no double-adding container scroll)
+        const y = e.clientY - rect.top;
         const hourDecimal = y / 160; // 160px scale mapping
         
         dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
@@ -1147,7 +1147,8 @@ function initInteractiveScheduleEngine() {
     function handleMouseMove(e) {
         if (!isDragging) return;
         const rect = grid.getBoundingClientRect();
-        const y = e.clientY - rect.top + container.scrollTop;
+        // Precise calculation relative to grid bounds (no double-adding container scroll)
+        const y = e.clientY - rect.top;
         const hourDecimal = y / 160; // 160px scale mapping
         
         dragEndHour = Math.max(0, Math.min(24, Math.round(hourDecimal * 4) / 4));
@@ -1179,7 +1180,8 @@ function initInteractiveScheduleEngine() {
 
         // If touching on the grid area, lock scrolling and start drawing!
         e.preventDefault(); 
-        const y = touch.clientY - rect.top + container.scrollTop;
+        // Precise calculation relative to grid bounds (no double-adding container scroll)
+        const y = touch.clientY - rect.top;
         const hourDecimal = y / 160; // 160px scale mapping
 
         dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
@@ -1195,7 +1197,8 @@ function initInteractiveScheduleEngine() {
 
         const touch = e.touches[0];
         const rect = grid.getBoundingClientRect();
-        const y = touch.clientY - rect.top + container.scrollTop;
+        // Precise calculation relative to grid bounds (no double-adding container scroll)
+        const y = touch.clientY - rect.top;
         const hourDecimal = y / 160; // 160px scale mapping
 
         dragEndHour = Math.max(0, Math.min(24, Math.round(hourDecimal * 4) / 4));
