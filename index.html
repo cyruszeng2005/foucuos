@@ -92,7 +92,7 @@
         .active-scale:active {
             transform: scale(0.96);
         }
-        /* Premium Tabular Numeric Layout Styles (High-end Watch & Finance style) */
+        /* Premium Tabular Numeric Layout Styles (High-end Watch style) */
         .premium-num {
             font-variant-numeric: tabular-nums;
             font-feature-settings: "tnum" 1, "ss01" 1;
@@ -219,7 +219,7 @@
                     </button>
                 </div>
 
-                <!-- PLAY CARD -->
+                <!-- PLAY CARD (REPLACED "玩" WITH "娱乐" AND UPDATED SCORING TO -15) -->
                 <div id="card-play" class="bg-white border border-apple-border rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group hover:shadow-sm">
                     <div id="pulse-play" class="absolute inset-0 bg-rose-500/5 opacity-0 pointer-events-none transition-all duration-300"></div>
                     <div class="flex justify-between items-start z-10">
@@ -259,38 +259,45 @@
                 <!-- Textarea -->
                 <textarea id="memo-textarea" placeholder="在此处记下今天的感悟、长期规划或系统待办..." class="flex-1 w-full bg-white border border-apple-border rounded-xl p-4 text-[16px] md:text-sm text-zinc-800 placeholder-zinc-400 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/50 resize-none leading-relaxed transition-all duration-200" style="-webkit-overflow-scrolling: touch;"></textarea>
                 
-                <!-- Gist Sync Portal (Collapsible Panel) -->
+                <!-- Gist Sync Portal (Collapsible Panel supporting multi-providers) -->
                 <div class="bg-white border border-apple-border rounded-xl p-3 shadow-sm no-select">
                     <div class="flex items-center justify-between cursor-pointer" onclick="toggleSyncPanel()">
                         <span class="text-xs font-black text-zinc-500 uppercase tracking-wider flex items-center space-x-1.5">
                             <i id="cloud-icon" class="fa-solid fa-cloud text-blue-500 animate-pulse"></i>
-                            <span>☁️ 云端数据同步</span>
+                            <span>☁️ 云端数据自动同步</span>
                         </span>
                         <span id="sync-indicator" class="text-[10px] text-zinc-400 font-bold">未配置</span>
                     </div>
                     
                     <!-- Form overlay -->
                     <div id="sync-form-panel" class="hidden mt-3 pt-3 border-t border-zinc-100 space-y-2.5">
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">GitHub Personal Token</label>
-                                <input type="password" id="gh-token" placeholder="ghp_..." class="w-full bg-zinc-50 border border-apple-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 placeholder-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="col-span-3">
+                                <label class="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">选择同步云端服务商</label>
+                                <select id="gh-provider" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20 font-sans font-bold">
+                                    <option value="gitee">Gitee 码云 Gist (推荐: 内地极速免代理)</option>
+                                    <option value="github">GitHub Gist (国外/需网络代理工具)</option>
+                                </select>
                             </div>
-                            <div>
-                                <label class="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">GitHub Gist ID</label>
-                                <input type="text" id="gh-gist-id" placeholder="例如: a8b9c10d..." class="w-full bg-zinc-50 border border-apple-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 placeholder-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
+                            <div class="col-span-3 md:col-span-2">
+                                <label class="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Gitee / GitHub Token</label>
+                                <input type="password" id="gh-token" placeholder="输入您的私人访问令牌 (Token)" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 placeholder-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
+                            </div>
+                            <div class="col-span-3 md:col-span-1">
+                                <label class="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Gist 档案 ID</label>
+                                <input type="text" id="gh-gist-id" placeholder="一串字母数字" class="w-full bg-zinc-50 border border-apple-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 placeholder-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
                             </div>
                         </div>
                         <div class="flex justify-between items-center pt-1.5">
                             <button onclick="saveSyncSettings()" class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-lg text-xs font-black transition-all duration-150 active-scale">
-                                保存配置
+                                保存并安全拉取
                             </button>
                             <div class="flex space-x-2">
                                 <button onclick="uploadToGist()" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-100 rounded-lg text-xs font-black transition-all duration-150 active-scale">
                                     手动备份
                                 </button>
                                 <button onclick="downloadFromGist()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 rounded-lg text-xs font-black transition-all duration-150 active-scale">
-                                    拉取云端
+                                    手动拉取
                                 </button>
                             </div>
                         </div>
@@ -333,7 +340,7 @@
         <form id="schedule-form" onsubmit="saveSchedule(event)" class="space-y-4">
             <div>
                 <label class="block text-xs font-black text-zinc-500 uppercase tracking-wider mb-1">事项名称</label>
-                <input required type="text" id="form-title" placeholder="例如：深度阅读、核心体能、逻辑梳理..." class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2.5 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500">
+                <input required type="text" id="form-title" placeholder="例如：学习算法、跑步运动、逻辑梳理..." class="w-full bg-zinc-50 border border-apple-border rounded-lg px-3.5 py-2.5 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500">
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -417,6 +424,7 @@ let state = {
 
 // Global syncing configurations
 let syncConfig = {
+    provider: "gitee", // "gitee" or "github"
     token: "",
     gistId: ""
 };
@@ -476,7 +484,7 @@ function getDisplayDateString(dateObj) {
 }
 
 function saveStateToLocalStorage() {
-    localStorage.setItem('zenfocus_state_v5_premium', JSON.stringify({
+    localStorage.setItem('zenfocus_state_v5_premium_v2', JSON.stringify({
         points: state.points,
         dailyStats: state.dailyStats,
         schedules: state.schedules,
@@ -486,7 +494,7 @@ function saveStateToLocalStorage() {
 }
 
 function loadStateFromLocalStorage() {
-    const stored = localStorage.getItem('zenfocus_state_v5_premium');
+    const stored = localStorage.getItem('zenfocus_state_v5_premium_v2');
     if (stored) {
         try {
             const parsed = JSON.parse(stored);
@@ -507,31 +515,34 @@ function toggleSyncPanel() {
     panel.classList.toggle('hidden');
 }
 
-// GitHub Gist Sync settings storage
+// GitHub & Gitee Gist Sync settings storage
 function saveSyncSettings() {
+    const provider = document.getElementById('gh-provider').value;
     const token = document.getElementById('gh-token').value.trim();
     const gistId = document.getElementById('gh-gist-id').value.trim();
     
+    syncConfig.provider = provider;
     syncConfig.token = token;
     syncConfig.gistId = gistId;
     
-    localStorage.setItem('focusos_sync_config', JSON.stringify(syncConfig));
+    localStorage.setItem('focusos_sync_config_v2', JSON.stringify(syncConfig));
     updateSyncIndicator();
     
     // Reset safety lock for the new configuration
     hasPulledFromCloud = false; 
     
-    showToast('正在关联云端', '正在安全连接您的 GitHub 并拉取已有历史数据...', 'info');
+    showToast('正在关联云端', '正在安全连接您的云便签并拉取已有历史数据...', 'info');
     
     // Trigger download/pull first instead of immediate auto-push!
     downloadFromGist();
 }
 
 function loadSyncSettings() {
-    const stored = localStorage.getItem('focusos_sync_config');
+    const stored = localStorage.getItem('focusos_sync_config_v2');
     if (stored) {
         try {
             syncConfig = JSON.parse(stored);
+            document.getElementById('gh-provider').value = syncConfig.provider || "gitee";
             document.getElementById('gh-token').value = syncConfig.token || "";
             document.getElementById('gh-gist-id').value = syncConfig.gistId || "";
         } catch(e) {}
@@ -546,8 +557,9 @@ function loadSyncSettings() {
 function updateSyncIndicator() {
     const ind = document.getElementById('sync-indicator');
     const icon = document.getElementById('cloud-icon');
+    const label = syncConfig.provider === 'gitee' ? 'Gitee' : 'GitHub';
     if (syncConfig.token && syncConfig.gistId) {
-        ind.innerText = "自动同步已就绪";
+        ind.innerText = `${label} 自动同步就绪`;
         ind.className = "text-[10px] text-emerald-500 font-extrabold";
         icon.className = "fa-solid fa-cloud text-emerald-500";
     } else {
@@ -555,6 +567,65 @@ function updateSyncIndicator() {
         ind.className = "text-[10px] text-zinc-400 font-bold";
         icon.className = "fa-solid fa-cloud text-zinc-300 animate-pulse";
     }
+}
+
+async function syncRequest(action, payload = null) {
+    const isGitee = syncConfig.provider === 'gitee';
+    const token = syncConfig.token;
+    const gistId = syncConfig.gistId;
+    if (!token || !gistId) return null;
+
+    const url = isGitee
+        ? `https://gitee.com/api/v5/gists/${gistId}`
+        : `https://api.github.com/gists/${gistId}`;
+
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    if (!isGitee) {
+        headers['Authorization'] = `token ${token}`;
+    }
+
+    let method = 'GET';
+    let body = null;
+
+    if (action === 'PATCH') {
+        method = isGitee ? 'PATCH' : 'PATCH'; // Gitee & GitHub both support PATCH for edits
+        const contentStr = JSON.stringify(state, null, 2);
+        
+        if (isGitee) {
+            body = JSON.stringify({
+                access_token: token,
+                description: "FocusOS Design Cloud Backup",
+                files: {
+                    "focusos_data.json": {
+                        content: contentStr
+                    }
+                }
+            });
+        } else {
+            body = JSON.stringify({
+                description: "FocusOS Design Cloud Backup",
+                files: {
+                    "focusos_data.json": {
+                        content: contentStr
+                    }
+                }
+            });
+        }
+    } else {
+        // GET Request
+        if (isGitee) {
+            // Append token in URL query parameter for Gitee request robustness
+            return fetchWithTimeout(`${url}?access_token=${token}`, { method, headers });
+        }
+    }
+
+    return fetchWithTimeout(url, {
+        method,
+        headers,
+        body
+    });
 }
 
 // Debounced Automatic Cloud Push Engine
@@ -570,7 +641,7 @@ function triggerAutoUpload() {
     clearTimeout(autoUploadTimeout);
     autoUploadTimeout = setTimeout(async () => {
         await silentUploadToGist();
-    }, 3000); // Wait for 3 seconds of inactivity before sending to GitHub Gist
+    }, 3000); // Wait for 3 seconds of inactivity before sending to Gist
 }
 
 // Background silent upload
@@ -587,24 +658,9 @@ async function silentUploadToGist() {
         return;
     }
     
-    const payload = {
-        description: "FocusOS Design Cloud Backup",
-        files: {
-            "focusos_data.json": {
-                content: JSON.stringify(state, null, 2)
-            }
-        }
-    };
-    
     try {
-        const res = await fetchWithTimeout(`https://api.github.com/gists/${syncConfig.gistId}`, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `token ${syncConfig.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
+        const res = await syncRequest('PATCH');
+        if (!res) return;
         
         const ind = document.getElementById('sync-indicator');
         if (res.ok) {
@@ -622,7 +678,7 @@ async function silentUploadToGist() {
     } catch(err) {
         const ind = document.getElementById('sync-indicator');
         if (ind) {
-            ind.innerText = "网络同步延迟";
+            ind.innerText = "网络断开 (请确认网络配置)";
             ind.className = "text-[10px] text-rose-400 font-extrabold";
         }
         console.warn("Auto-upload delayed due to network:", err);
@@ -632,13 +688,13 @@ async function silentUploadToGist() {
 // Manual Upload
 async function uploadToGist() {
     if (!syncConfig.token || !syncConfig.gistId) {
-        showToast('备份中断', '请先填写并保存您的 GitHub 密钥与 Gist ID。', 'warning');
+        showToast('备份中断', '请先填写并保存您的云端密钥与 Gist ID。', 'warning');
         return;
     }
     
     showToast('同步中', '正在打包所有数据上传至云端...', 'info');
     await silentUploadToGist();
-    showToast('备份成功', '数据已完美存储在您的 GitHub 私有云端。', 'success');
+    showToast('备份成功', '数据已完美存储在您的专属云端档案中。', 'success');
 }
 
 // Download/Restore Trigger
@@ -651,12 +707,8 @@ async function downloadFromGist() {
     showToast('拉取中', '正在从您的专属云端拉取最末次存盘...', 'info');
     
     try {
-        const res = await fetchWithTimeout(`https://api.github.com/gists/${syncConfig.gistId}`, {
-            headers: {
-                'Authorization': `token ${syncConfig.token}`,
-                'Cache-Control': 'no-cache'
-            }
-        });
+        const res = await syncRequest('GET');
+        if (!res) return;
         
         if (res.ok) {
             const data = await res.json();
@@ -669,16 +721,14 @@ async function downloadFromGist() {
                     parsedState = {};
                 }
                 
-                // Check if Gist is completely blank/newly initialized (e.g., "{}" or empty object)
+                // Check if Gist is completely blank/newly initialized
                 if (Object.keys(parsedState).length === 0 || (!parsedState.schedules && !parsedState.memo && parsedState.points === undefined)) {
-                    // Safe to seed the empty cloud with local state
                     hasPulledFromCloud = true;
                     lastSyncTimestamp = Date.parse(data.updated_at) || Date.now();
                     saveStateToLocalStorage();
                     
                     showToast('初始化成功', '检测到全新的云端，已将您本地的数据安全同步至云端！', 'success');
                     
-                    // Trigger immediate seed push
                     triggerAutoUpload();
                     return;
                 }
@@ -707,7 +757,7 @@ async function downloadFromGist() {
             showToast('连接失败', '拉取失败。请确认 Token、Gist ID 的正确性。', 'warning');
         }
     } catch(err) {
-        showToast('同步出错', '连接超时，请确认您的网络是否能流畅访问 GitHub。', 'warning');
+        showToast('同步出错', '连接超时，国内连接 GitHub API 若受阻，推荐切换为 Gitee 模式。', 'warning');
         console.error("Gist download error:", err);
     }
 }
@@ -727,12 +777,8 @@ async function autoDownloadOnLoad() {
     }
     
     try {
-        const res = await fetchWithTimeout(`https://api.github.com/gists/${syncConfig.gistId}`, {
-            headers: {
-                'Authorization': `token ${syncConfig.token}`,
-                'Cache-Control': 'no-cache'
-            }
-        });
+        const res = await syncRequest('GET');
+        if (!res) return;
         
         if (res.ok) {
             const data = await res.json();
@@ -772,7 +818,7 @@ async function autoDownloadOnLoad() {
         }
     } catch(e) {
         if (ind) {
-            ind.innerText = "网络断开 (请开启网络工具)";
+            ind.innerText = "网络断开 (中国内地推荐使用 Gitee)";
             ind.className = "text-[10px] text-rose-400 font-bold";
         }
         console.warn("Initial background sync offline:", e);
@@ -791,13 +837,8 @@ async function backgroundSyncCheck() {
     if (isDragging) return;
 
     try {
-        const res = await fetchWithTimeout(`https://api.github.com/gists/${syncConfig.gistId}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `token ${syncConfig.token}`,
-                'Cache-Control': 'no-cache'
-            }
-        });
+        const res = await syncRequest('GET');
+        if (!res) return;
         
         if (res.ok) {
             const data = await res.json();
@@ -830,7 +871,6 @@ async function backgroundSyncCheck() {
                     showToast('检测到多端更新', '已自动对齐您的云端日程与积分数据。', 'success');
                 }
             } else {
-                // If cloud is updated but has same data, keep icon green
                 const ind = document.getElementById('sync-indicator');
                 if (ind && ind.innerText.includes("网络断开")) {
                     ind.innerText = "云端已同步";
@@ -840,7 +880,6 @@ async function backgroundSyncCheck() {
         }
     } catch (e) {
         console.warn("Background sync offline check:", e);
-        // Do not pop toast here to avoid bothering the user during short transient network drops
     }
 }
 
@@ -1038,7 +1077,7 @@ function updateCurrentTimeIndicator() {
         const hours = now.getHours();
         const minutes = now.getMinutes();
         const totalHours = hours + (minutes / 60);
-        const topPx = totalHours * 160; // Scaling matched to new 160px grid scale
+        const topPx = totalHours * 160; // Scale: 1 hour = 160px
 
         indicator.style.top = `${topPx}px`;
         indicator.classList.remove('hidden');
@@ -1056,7 +1095,7 @@ function renderTimelineGrid() {
         const timeStr = `${String(i).padStart(2, '0')}:00`;
         const lineDiv = document.createElement('div');
         
-        // Exact height block placed at precise coordinate intervals (Now 160px for high definition & readable compact events)
+        // Exact height block placed at precise coordinate intervals (160px for high definition & readable compact events)
         lineDiv.className = "absolute left-0 right-0 border-b border-zinc-100 flex items-center pointer-events-none";
         lineDiv.style.top = `${i * 160}px`;
         lineDiv.style.height = `160px`;
@@ -1081,6 +1120,7 @@ function timeToPixels(timeStr) {
 // Interactive Scheduler drag and tap controller (Completely unifies desktop and mobile)
 function initInteractiveScheduleEngine() {
     const grid = document.getElementById('timeline-grid');
+    const container = document.getElementById('timeline-container');
 
     // 1. DESKTOP MOUSE EVENTS
     grid.addEventListener('mousedown', (e) => {
@@ -1090,7 +1130,8 @@ function initInteractiveScheduleEngine() {
         const clickX = e.clientX - rect.left;
         if (clickX < 64) return; // Ignore dragging on the left label track
 
-        const y = e.clientY - rect.top;
+        // Fix offset calculation with container.scrollTop
+        const y = e.clientY - rect.top + container.scrollTop;
         const hourDecimal = y / 160; // 160px scale mapping
         
         dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
@@ -1106,7 +1147,7 @@ function initInteractiveScheduleEngine() {
     function handleMouseMove(e) {
         if (!isDragging) return;
         const rect = grid.getBoundingClientRect();
-        const y = e.clientY - rect.top;
+        const y = e.clientY - rect.top + container.scrollTop;
         const hourDecimal = y / 160; // 160px scale mapping
         
         dragEndHour = Math.max(0, Math.min(24, Math.round(hourDecimal * 4) / 4));
@@ -1138,7 +1179,7 @@ function initInteractiveScheduleEngine() {
 
         // If touching on the grid area, lock scrolling and start drawing!
         e.preventDefault(); 
-        const y = touch.clientY - rect.top;
+        const y = touch.clientY - rect.top + container.scrollTop;
         const hourDecimal = y / 160; // 160px scale mapping
 
         dragStartHour = Math.max(0, Math.min(23.75, Math.round(hourDecimal * 4) / 4));
@@ -1154,7 +1195,7 @@ function initInteractiveScheduleEngine() {
 
         const touch = e.touches[0];
         const rect = grid.getBoundingClientRect();
-        const y = touch.clientY - rect.top;
+        const y = touch.clientY - rect.top + container.scrollTop;
         const hourDecimal = y / 160; // 160px scale mapping
 
         dragEndHour = Math.max(0, Math.min(24, Math.round(hourDecimal * 4) / 4));
@@ -1320,8 +1361,8 @@ function renderEvents() {
 
         const mins = getDurationMinutes(evt.start, evt.end);
         let ptsHelper = "";
-        if (evt.color === 'blue') ptsHelper = `+${mins * 3} PTS`;
-        else if (evt.color === 'red') ptsHelper = `-${mins * 15} PTS`;
+        if (evt.color === 'blue') ptsHelper = `+${mins * 3} PTS`; // Updated to +3
+        else if (evt.color === 'red') ptsHelper = `-${mins * 15} PTS`; // Updated to -15
         else ptsHelper = `${evt.customPoints >= 0 ? '+' : ''}${evt.customPoints} PTS`;
 
         if (isShort) {
