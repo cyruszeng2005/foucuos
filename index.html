@@ -108,10 +108,9 @@
 
 <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative w-full h-full">
 
-    <!-- ==================== LEFT HALF: CALENDAR SYSTEM (Tab 1 on Mobile) ==================== -->
+    <!-- ==================== LEFT HALF: CALENDAR SYSTEM ==================== -->
     <section id="section-calendar" class="w-full md:w-1/2 border-r border-apple-border flex flex-col h-full bg-white select-none transition-all duration-300">
         
-        <!-- Apple Premium Day Picker -->
         <div class="p-4 md:p-6 border-b border-apple-border flex flex-col space-y-4 no-select flex-shrink-0 bg-white">
             <div class="flex items-center justify-between">
                 <!-- Capsule Buttons for quick day toggling -->
@@ -167,14 +166,14 @@
         </div>
     </section>
 
-    <!-- ==================== RIGHT HALF: OVERVIEW & CONTROLS (Tab 2 & 3 on Mobile) ==================== -->
+    <!-- ==================== RIGHT HALF: OVERVIEW & CONTROLS ==================== -->
     <section id="section-right" class="w-full md:w-1/2 flex flex-col h-full bg-apple-light overflow-hidden transition-all duration-300">
         
         <!-- Right Top Half - Points & Timer (Tab 2 on Mobile) -->
         <div id="panel-focus" class="h-1/2 border-b border-apple-border p-6 md:p-8 flex flex-col justify-between bg-white/40 overflow-y-auto md:overflow-visible">
             <!-- Giant Score Display -->
             <div class="flex flex-col items-center justify-center py-4 text-center flex-shrink-0">
-                <span class="text-[10px] tracking-widest text-apple-muted font-bold uppercase mb-1">TOTAL INTEGRAL · 累计总积分</span>
+                <span class="text-[10px] tracking-widest text-apple-muted font-bold uppercase mb-1">TOTAL INTEGRAL · 当前累计积分</span>
                 <div class="flex items-baseline space-x-1.5">
                     <span class="text-5xl md:text-6xl font-black tracking-tight text-apple-darkText font-sans transition-all duration-300 ease-out" id="points-display">
                         0
@@ -204,8 +203,8 @@
                     </div>
                     
                     <div class="mt-4 z-10">
-                        <h4 class="text-xs md:text-sm font-black text-zinc-800">碎片学习</h4>
-                        <p class="text-[11px] text-apple-muted mt-0.5" id="timer-study-desc">待开启专注</p>
+                        <h4 class="text-xs md:text-sm font-black text-zinc-800">学习</h4>
+                        <p class="text-[11px] text-apple-muted mt-0.5" id="timer-study-desc">待开启</p>
                         <div class="text-xl md:text-2xl font-mono font-black text-blue-600 mt-1 hidden" id="timer-study-display">00:00</div>
                     </div>
 
@@ -228,14 +227,14 @@
                     </div>
                     
                     <div class="mt-4 z-10">
-                        <h4 class="text-xs md:text-sm font-black text-zinc-800">娱乐放松</h4>
-                        <p class="text-[11px] text-apple-muted mt-0.5" id="timer-play-desc">待开启放松</p>
+                        <h4 class="text-xs md:text-sm font-black text-zinc-800">玩</h4>
+                        <p class="text-[11px] text-apple-muted mt-0.5" id="timer-play-desc">待开启</p>
                         <div class="text-xl md:text-2xl font-mono font-black text-rose-600 mt-1 hidden" id="timer-play-display">00:00</div>
                     </div>
 
                     <button id="btn-play" onclick="toggleTracker('play')" class="mt-3.5 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs md:text-sm font-black transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 active-scale">
                         <i class="fa-solid fa-play text-[10px]"></i>
-                        <span>开始放松</span>
+                        <span>开始玩</span>
                     </button>
                 </div>
             </div>
@@ -246,13 +245,52 @@
             <div class="flex items-center justify-between mb-3 no-select flex-shrink-0">
                 <h3 class="text-xs font-black tracking-wider text-zinc-500 uppercase flex items-center space-x-2">
                     <i class="fa-regular fa-note-sticky text-amber-500"></i>
-                    <span>随笔 · 备忘录</span>
+                    <span>随笔</span>
                 </h3>
                 <span id="note-status" class="text-xs text-zinc-400 italic font-bold">自动保存中...</span>
             </div>
             
-            <div class="flex-1 relative">
-                <textarea id="memo-textarea" placeholder="在此处记下今天的感悟、长期规划或系统待办..." class="w-full h-full bg-white border border-apple-border rounded-xl p-4 text-[16px] md:text-sm text-zinc-800 placeholder-zinc-400 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/50 resize-none leading-relaxed transition-all duration-200" style="-webkit-overflow-scrolling: touch;"></textarea>
+            <div class="flex-1 flex flex-col space-y-4 min-h-0 relative">
+                <!-- Textarea -->
+                <textarea id="memo-textarea" placeholder="在此处记下今天的感悟、长期规划或系统待办..." class="flex-1 w-full bg-white border border-apple-border rounded-xl p-4 text-[16px] md:text-sm text-zinc-800 placeholder-zinc-400 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/50 resize-none leading-relaxed transition-all duration-200" style="-webkit-overflow-scrolling: touch;"></textarea>
+                
+                <!-- Gist Sync Portal (Collapsible Panel) -->
+                <div class="bg-white border border-apple-border rounded-xl p-3 shadow-sm no-select">
+                    <div class="flex items-center justify-between cursor-pointer" onclick="toggleSyncPanel()">
+                        <span class="text-xs font-black text-zinc-500 uppercase tracking-wider flex items-center space-x-1.5">
+                            <i id="cloud-icon" class="fa-solid fa-cloud text-blue-500 animate-pulse"></i>
+                            <span>☁️ 云端数据同步</span>
+                        </span>
+                        <span id="sync-indicator" class="text-[10px] text-zinc-400 font-bold">未配置</span>
+                    </div>
+                    
+                    <!-- Form overlay -->
+                    <div id="sync-form-panel" class="hidden mt-3 pt-3 border-t border-zinc-100 space-y-2.5">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">GitHub Personal Token</label>
+                                <input type="password" id="gh-token" placeholder="ghp_..." class="w-full bg-zinc-50 border border-apple-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 placeholder-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">GitHub Gist ID</label>
+                                <input type="text" id="gh-gist-id" placeholder="例如: a8b9c10d..." class="w-full bg-zinc-50 border border-apple-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 placeholder-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500/20">
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center pt-1.5">
+                            <button onclick="saveSyncSettings()" class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-lg text-xs font-black transition-all duration-150 active-scale">
+                                保存配置
+                            </button>
+                            <div class="flex space-x-2">
+                                <button onclick="uploadToGist()" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-100 rounded-lg text-xs font-black transition-all duration-150 active-scale">
+                                    手动备份
+                                </button>
+                                <button onclick="downloadFromGist()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 rounded-lg text-xs font-black transition-all duration-150 active-scale">
+                                    拉取云端
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -354,9 +392,8 @@
     </div>
 </div>
 
-<!-- ==================== CORE JAVA SCRIPT BUSINESS LOGIC ==================== -->
+<!-- ==================== CORE JAVASCRIPT BUSINESS LOGIC ==================== -->
 <script>
-// Core Application State
 let state = {
     selectedDate: new Date(), 
     points: 0,                // Global persistent lifetime cumulative score
@@ -370,14 +407,20 @@ let state = {
         spentAtStart: null,
         dateKey: null
     },
-    memo: "",
-    activeMobileTab: 'calendar' // 'calendar' | 'focus' | 'memo'
+    memo: ""
+};
+
+// Global syncing configurations
+let syncConfig = {
+    token: "",
+    gistId: ""
 };
 
 // Tracking coordinates for dragging (Fully optimized for desktop + mobile)
 let isDragging = false;
 let dragStartHour = null;
 let dragEndHour = null;
+let autoUploadTimeout = null;
 
 // Convert Date object to YYYY-MM-DD safely
 function getYYYYMMDD(dateObj) {
@@ -403,7 +446,6 @@ function getDisplayDateString(dateObj) {
     return `${months}月${date}日 (${dayOfWeek})`;
 }
 
-// Local Storage persist methods
 function saveStateToLocalStorage() {
     localStorage.setItem('zenfocus_state_v5_premium', JSON.stringify({
         points: state.points,
@@ -430,9 +472,230 @@ function loadStateFromLocalStorage() {
     }
 }
 
+// Collapsible Gist Panel Controller
+function toggleSyncPanel() {
+    const panel = document.getElementById('sync-form-panel');
+    panel.classList.toggle('hidden');
+}
+
+// GitHub Gist Sync settings storage
+function saveSyncSettings() {
+    const token = document.getElementById('gh-token').value.trim();
+    const gistId = document.getElementById('gh-gist-id').value.trim();
+    
+    syncConfig.token = token;
+    syncConfig.gistId = gistId;
+    
+    localStorage.setItem('focusos_sync_config', JSON.stringify(syncConfig));
+    updateSyncIndicator();
+    showToast('同步配置保存', '设置已保存在本设备，自动双向传输就绪。', 'success');
+    
+    // Test auto backup instantly
+    triggerAutoUpload();
+}
+
+function loadSyncSettings() {
+    const stored = localStorage.getItem('focusos_sync_config');
+    if (stored) {
+        try {
+            syncConfig = JSON.parse(stored);
+            document.getElementById('gh-token').value = syncConfig.token || "";
+            document.getElementById('gh-gist-id').value = syncConfig.gistId || "";
+        } catch(e) {}
+    }
+    updateSyncIndicator();
+}
+
+function updateSyncIndicator() {
+    const ind = document.getElementById('sync-indicator');
+    const icon = document.getElementById('cloud-icon');
+    if (syncConfig.token && syncConfig.gistId) {
+        ind.innerText = "自动同步已就绪";
+        ind.className = "text-[10px] text-emerald-500 font-extrabold";
+        icon.className = "fa-solid fa-cloud text-emerald-500";
+    } else {
+        ind.innerText = "未配置";
+        ind.className = "text-[10px] text-zinc-400 font-bold";
+        icon.className = "fa-solid fa-cloud text-zinc-300 animate-pulse";
+    }
+}
+
+// Debounced Automatic Cloud Push Engine
+function triggerAutoUpload() {
+    if (!syncConfig.token || !syncConfig.gistId) return;
+
+    const ind = document.getElementById('sync-indicator');
+    if (ind) {
+        ind.innerText = "正在自动同步...";
+        ind.className = "text-[10px] text-amber-500 font-extrabold animate-pulse";
+    }
+
+    clearTimeout(autoUploadTimeout);
+    autoUploadTimeout = setTimeout(async () => {
+        await silentUploadToGist();
+    }, 3000); // Wait for 3 seconds of inactivity before sending to GitHub Gist
+}
+
+// Background silent upload
+async function silentUploadToGist() {
+    if (!syncConfig.token || !syncConfig.gistId) return;
+    
+    const payload = {
+        description: "FocusOS Design Cloud Backup",
+        files: {
+            "focusos_data.json": {
+                content: JSON.stringify(state, null, 2)
+            }
+        }
+    };
+    
+    try {
+        const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${syncConfig.token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        const ind = document.getElementById('sync-indicator');
+        if (res.ok) {
+            if (ind) {
+                ind.innerText = "云端已同步";
+                ind.className = "text-[10px] text-emerald-500 font-extrabold";
+            }
+        } else {
+            if (ind) {
+                ind.innerText = "自动上传受限";
+                ind.className = "text-[10px] text-rose-500 font-extrabold";
+            }
+        }
+    } catch(err) {
+        const ind = document.getElementById('sync-indicator');
+        if (ind) {
+            ind.innerText = "网络同步延迟";
+            ind.className = "text-[10px] text-rose-400 font-extrabold";
+        }
+    }
+}
+
+// Manual Upload
+async function uploadToGist() {
+    if (!syncConfig.token || !syncConfig.gistId) {
+        showToast('备份中断', '请先填写并保存您的 GitHub 密钥与 Gist ID。', 'warning');
+        return;
+    }
+    
+    showToast('同步中', '正在打包所有数据上传至云端...', 'info');
+    await silentUploadToGist();
+    showToast('备份成功', '数据已完美存储在您的 GitHub 私有云端。', 'success');
+}
+
+// Download/Restore Trigger
+async function downloadFromGist() {
+    if (!syncConfig.token || !syncConfig.gistId) {
+        showToast('同步中断', '请先配置密钥及 Gist ID。', 'warning');
+        return;
+    }
+    
+    showToast('拉取中', '正在从您的专属云端拉取最末次存盘...', 'info');
+    
+    try {
+        const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
+            headers: {
+                'Authorization': `token ${syncConfig.token}`
+            }
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            const file = data.files["focusos_data.json"];
+            if (file && file.content) {
+                const parsedState = JSON.parse(file.content);
+                
+                // Overlay the clouds' state on our live variables
+                state.points = parsedState.points || 0;
+                state.dailyStats = parsedState.dailyStats || {};
+                state.schedules = parsedState.schedules || {};
+                state.memo = parsedState.memo || "";
+                
+                saveStateToLocalStorage();
+                
+                // Re-init UI
+                document.getElementById('memo-textarea').value = state.memo;
+                selectNewDate(state.selectedDate);
+                
+                showToast('恢复成功', '云端数据已成功拉回并同步到本地！', 'success');
+            } else {
+                showToast('恢复错误', '未在指定的 Gist 中检索到 "focusos_data.json" 文件。', 'warning');
+            }
+        } else {
+            showToast('恢复失败', '无法拉取数据。请检查密钥与 Gist ID 是否对应。', 'warning');
+        }
+    } catch(err) {
+        showToast('同步出错', '网络通信异常，请检查手机数据连接。', 'warning');
+    }
+}
+
+// Silent Auto-Download on system startup
+async function autoDownloadOnLoad() {
+    if (!syncConfig.token || !syncConfig.gistId) return;
+    
+    const ind = document.getElementById('sync-indicator');
+    if (ind) {
+        ind.innerText = "正在自动拉取云端...";
+        ind.className = "text-[10px] text-blue-500 font-extrabold animate-pulse";
+    }
+    
+    try {
+        const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
+            headers: {
+                'Authorization': `token ${syncConfig.token}`
+            }
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            const file = data.files["focusos_data.json"];
+            if (file && file.content) {
+                const parsedState = JSON.parse(file.content);
+                
+                state.points = parsedState.points !== undefined ? parsedState.points : state.points;
+                state.dailyStats = parsedState.dailyStats || state.dailyStats;
+                state.schedules = parsedState.schedules || state.schedules;
+                state.memo = parsedState.memo || state.memo;
+                
+                saveStateToLocalStorage();
+                
+                // Update views
+                document.getElementById('memo-textarea').value = state.memo;
+                selectNewDate(state.selectedDate);
+                
+                if (ind) {
+                    ind.innerText = "云端已同步";
+                    ind.className = "text-[10px] text-emerald-500 font-extrabold";
+                }
+                showToast('全自动同步就绪', '已自动拉取最新的云端日程与积分数据。', 'success');
+            }
+        } else {
+            if (ind) {
+                ind.innerText = "拉取同步受限";
+                ind.className = "text-[10px] text-rose-500 font-extrabold";
+            }
+        }
+    } catch(e) {
+        if (ind) {
+            ind.innerText = "网络断开";
+            ind.className = "text-[10px] text-rose-400 font-bold";
+        }
+    }
+}
+
 // Multi-device Viewport Swapper: Eliminates layout compression on mobile!
+let activeMobileTab = 'calendar'; // 'calendar' | 'focus' | 'memo'
 function switchMobileTab(tab) {
-    state.activeMobileTab = tab;
+    activeMobileTab = tab;
     updateLayoutForTabs();
 }
 
@@ -467,14 +730,14 @@ function updateLayoutForTabs() {
         btn.className = "flex flex-col items-center space-y-1 text-zinc-400 transition-all duration-150 py-1 px-3 rounded-lg active:bg-zinc-100";
     });
 
-    if (state.activeMobileTab === 'calendar') {
+    if (activeMobileTab === 'calendar') {
         sectionCalendar.classList.remove('hidden');
         sectionCalendar.classList.add('flex', 'w-full', 'h-full');
         sectionRight.classList.add('hidden');
         
         btnNavCalendar.className = "flex flex-col items-center space-y-1 text-blue-500 transition-all duration-150 py-1 px-3 rounded-lg bg-zinc-100 font-extrabold";
     } 
-    else if (state.activeMobileTab === 'focus') {
+    else if (activeMobileTab === 'focus') {
         sectionCalendar.classList.add('hidden');
         sectionRight.classList.remove('hidden');
         sectionRight.className = "w-full flex flex-col h-full bg-apple-light overflow-hidden";
@@ -485,7 +748,7 @@ function updateLayoutForTabs() {
         
         btnNavFocus.className = "flex flex-col items-center space-y-1 text-blue-500 transition-all duration-150 py-1 px-3 rounded-lg bg-zinc-100 font-extrabold";
     } 
-    else if (state.activeMobileTab === 'memo') {
+    else if (activeMobileTab === 'memo') {
         sectionCalendar.classList.add('hidden');
         sectionRight.classList.remove('hidden');
         sectionRight.className = "w-full flex flex-col h-full bg-apple-light overflow-hidden";
@@ -861,6 +1124,9 @@ function saveSchedule(e) {
     renderEvents();
     closeModal();
     showToast('日程已创建', `"${title}" 已经精准排入计划。`, 'success');
+    
+    // Auto-Sync trigger
+    triggerAutoUpload();
 }
 
 // Event block renderer
@@ -901,7 +1167,7 @@ function renderEvents() {
                     <div class="flex items-center justify-center p-1">
                         <input type="checkbox" ${evt.completed ? 'checked' : ''} onclick="toggleEventCompletion('${evt.id}', event)" class="w-5 h-5 rounded border-zinc-300 text-blue-600 focus:ring-0 cursor-pointer accent-blue-600 active-scale">
                     </div>
-                    <div class="flex flex-col overflow-hidden">
+                    <div class="flex flex-col overflow-hidden font-bold">
                         <span class="text-xs md:text-sm font-black truncate ${evt.completed ? 'text-zinc-400' : 'text-zinc-800'}">${evt.title}</span>
                         <span class="text-[11px] font-mono font-black text-zinc-600/90 mt-0.5">${evt.start} - ${evt.end} (${mins}分)</span>
                     </div>
@@ -995,6 +1261,9 @@ function toggleEventCompletion(id, event) {
     saveStateToLocalStorage();
     renderEvents();
     updatePointsUI();
+    
+    // Auto-Sync trigger
+    triggerAutoUpload();
 }
 
 function deleteEvent(id, event) {
@@ -1024,6 +1293,9 @@ function deleteEvent(id, event) {
     renderEvents();
     updatePointsUI();
     showToast('日程撤销', '事项已成功从计划表移除', 'info');
+    
+    // Auto-Sync trigger
+    triggerAutoUpload();
 }
 
 // Stopwatch logic: Time-Delta calculations to handle screen lock & sleep seamlessly
@@ -1145,7 +1417,7 @@ function stopActiveTracker() {
     document.getElementById(`timer-${type}-desc`).innerText = "待开启计时";
 
     const btn = document.getElementById(`btn-${type}`);
-    btn.innerHTML = `<i class="fa-solid fa-play text-[10px]"></i> <span>开始${type === 'study' ? '学习' : '放松'}</span>`;
+    btn.innerHTML = `<i class="fa-solid fa-play text-[10px]"></i> <span>开始${type === 'study' ? '学习' : '玩'}</span>`;
     btn.className = "mt-3.5 w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs md:text-sm font-black transition-all duration-200 z-10 flex items-center justify-center space-x-1.5 active-scale";
 
     // Decommission current tracker
@@ -1159,6 +1431,9 @@ function stopActiveTracker() {
         `本次持续了 ${finalMins} 分钟。数值波动：${totalImpact >= 0 ? '+' : ''}${totalImpact} PTS`, 
         type === 'study' ? 'success' : 'warning'
     );
+    
+    // Auto-Sync trigger
+    triggerAutoUpload();
 }
 
 function resumeActiveTracker() {
@@ -1190,7 +1465,7 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-// Slate Autosave
+// Slate Autosave & Cloud Sync Integration
 function initMemoController() {
     const memo = document.getElementById('memo-textarea');
     memo.value = state.memo;
@@ -1205,6 +1480,9 @@ function initMemoController() {
             state.memo = memo.value;
             saveStateToLocalStorage();
             status.innerText = "已自动保存在本地";
+            
+            // Auto-Sync trigger
+            triggerAutoUpload();
         }, 800);
     });
 }
@@ -1212,6 +1490,7 @@ function initMemoController() {
 // Window Loader Bootstraps
 window.onload = function() {
     loadStateFromLocalStorage();
+    loadSyncSettings();
     initClock();
     selectNewDate(new Date()); 
     initInteractiveScheduleEngine();
@@ -1223,6 +1502,9 @@ window.onload = function() {
 
     // Auto-update current time indicator every 30 seconds
     setInterval(updateCurrentTimeIndicator, 30000);
+    
+    // Trigger Auto Cloud Download on startup
+    autoDownloadOnLoad();
 }
 </script>
 
