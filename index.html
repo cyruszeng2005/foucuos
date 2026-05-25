@@ -330,7 +330,7 @@
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-base font-black text-apple-darkText flex items-center space-x-2">
                 <i class="fa-solid fa-calendar-plus text-blue-500"></i>
-                <span>新增日程事项</span>
+                <span id="modal-title-text">新增日程事项</span>
             </h3>
             <button onclick="closeModal()" class="text-zinc-400 hover:text-zinc-600 transition-colors duration-150 p-2 rounded-full hover:bg-zinc-100 active-scale">
                 <i class="fa-solid fa-xmark text-lg"></i>
@@ -387,7 +387,7 @@
                 <button type="button" onclick="closeModal()" class="w-1/2 py-3 border border-apple-border rounded-lg text-sm font-black text-zinc-500 hover:bg-zinc-50 transition-colors duration-150 active-scale">
                     取消
                 </button>
-                <button type="submit" class="w-1/2 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-black transition-all duration-150 shadow-sm active-scale">
+                <button type="submit" id="btn-save-schedule" class="w-1/2 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-black transition-all duration-150 shadow-sm active-scale">
                     保存事项
                 </button>
             </div>
@@ -438,6 +438,7 @@ let dragStartHour = null;
 let dragEndHour = null;
 let autoUploadTimeout = null;
 let lastSyncTimestamp = 0; // Tracks when we last synced to avoid redundant downloads
+let editingEventId = null; // Track if we are editing an event, null if creating
 
 // High-performance Fetch wrapper with timeout limit to avoid browser hanging
 async function fetchWithTimeout(resource, options = {}) {
@@ -1265,9 +1266,55 @@ function finalizeDragSelection() {
 }
 
 function openModalWithRange(startStr, endStr) {
+    editingEventId = null; // Clear edit token
     document.getElementById('form-start').value = startStr;
     document.getElementById('form-end').value = endStr;
     
+    // Update labels to creation mode
+    document.getElementById('modal-title-text').innerText = "新增日程事项";
+    document.getElementById('btn-save-schedule').innerText = "保存事项";
+    
+    const modal = document.getElementById('modal-container');
+    const card = document.getElementById('modal-card');
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    card.classList.remove('scale-95');
+    card.classList.add('scale-100');
+}
+
+function openEditModal(id, event) {
+    if (event) event.stopPropagation(); // Avoid triggering grid selections
+    
+    const dateKey = getYYYYMMDD(state.selectedDate);
+    const list = state.schedules[dateKey] || [];
+    const evt = list.find(e => e.id === id);
+    if (!evt) return;
+    
+    editingEventId = id; // Set active edit token
+    
+    // Autofill details
+    document.getElementById('form-title').value = evt.title;
+    document.getElementById('form-start').value = evt.start;
+    document.getElementById('form-end').value = evt.end;
+    
+    const radios = document.querySelectorAll('input[name="type-color"]');
+    radios.forEach(radio => {
+        if (radio.value === evt.color) {
+            radio.checked = true;
+        }
+    });
+    
+    if (evt.color === 'green') {
+        toggleCustomPointsField(true);
+        document.getElementById('form-custom-points').value = evt.customPoints;
+    } else {
+        toggleCustomPointsField(false);
+    }
+    
+    // Customize layout labels for update actions
+    document.getElementById('modal-title-text').innerText = "编辑日程事项";
+    document.getElementById('btn-save-schedule').innerText = "保存修改";
+    
+    // Open panel smoothly
     const modal = document.getElementById('modal-container');
     const card = document.getElementById('modal-card');
     modal.classList.remove('opacity-0', 'pointer-events-none');
@@ -1283,6 +1330,7 @@ function closeModal() {
     card.classList.remove('scale-100');
     document.getElementById('schedule-form').reset();
     toggleCustomPointsField(false);
+    editingEventId = null; // Flush token
 }
 
 function toggleCustomPointsField(show) {
@@ -1314,26 +1362,74 @@ function saveSchedule(event) {
         customPoints = parseInt(document.getElementById('form-custom-points').value, 10) || 0;
     }
 
-    const newEvent = {
-        id: 'evt_' + Date.now(),
-        title,
-        start: startTime,
-        end: endTime,
-        color,
-        customPoints,
-        completed: false
-    };
-
     const dateKey = getYYYYMMDD(state.selectedDate);
     if (!state.schedules[dateKey]) {
         state.schedules[dateKey] = [];
     }
     
-    state.schedules[dateKey].push(newEvent);
+    const list = state.schedules[dateKey];
+    
+    if (editingEventId) {
+        // ==================== EDIT/UPDATE ACTION ====================
+        const index = list.findIndex(e => e.id === editingEventId);
+        if (index === -1) return;
+        
+        const evt = list[index];
+        
+        // Re-calculate math logic if editing a finalized schedule item
+        if (evt.completed) {
+            // A. Rollback old scoring structures
+            const oldDuration = getDurationMinutes(evt.start, evt.end);
+            let oldScore = 0;
+            if (evt.color === 'blue') oldScore = oldDuration * 3;
+            else if (evt.color === 'red') oldScore = oldDuration * -15;
+            else if (evt.color === 'green') oldScore = evt.customPoints;
+            
+            state.points -= oldScore;
+            const dayStats = getDayStatsObj(dateKey);
+            if (oldScore >= 0) dayStats.earned -= oldScore;
+            else dayStats.spent -= oldScore;
+            
+            // B. Inject updated scoring values
+            const newDuration = getDurationMinutes(startTime, endTime);
+            let newScore = 0;
+            if (color === 'blue') newScore = newDuration * 3;
+            else if (color === 'red') newScore = newDuration * -15;
+            else if (color === 'green') newScore = customPoints;
+            
+            state.points += newScore;
+            if (newScore >= 0) dayStats.earned += newScore;
+            else dayStats.spent += newScore;
+        }
+        
+        // Apply modifications
+        evt.title = title;
+        evt.start = startTime;
+        evt.end = endTime;
+        evt.color = color;
+        evt.customPoints = customPoints;
+        
+        showToast('日程已修改', `"${title}" 已经成功更新。`, 'success');
+        editingEventId = null; // Clear ID
+    } else {
+        // ==================== CREATE ACTION ====================
+        const newEvent = {
+            id: 'evt_' + Date.now(),
+            title,
+            start: startTime,
+            end: endTime,
+            color,
+            customPoints,
+            completed: false
+        };
+        list.push(newEvent);
+        showToast('日程已创建', `"${title}" 已经精准排入计划。`, 'success');
+    }
+
     saveStateToLocalStorage();
     renderEvents();
     closeModal();
-    showToast('日程已创建', `"${title}" 已经精准排入计划。`, 'success');
+    updatePointsUI();
     
     // Auto-Sync trigger
     triggerAutoUpload();
@@ -1359,14 +1455,15 @@ function renderEvents() {
         const card = document.createElement('div');
         
         // Apply responsive visual layout tokens dynamically based on event duration
+        // Added 'cursor-pointer' and micro tactile feedback class structures for click adjustments
         if (isShort) {
-            card.className = `absolute left-2 right-2 rounded-xl px-2 py-1 border shadow-sm transition-all duration-300 flex items-center justify-between overflow-hidden group pointer-events-auto ${
+            card.className = `absolute left-2 right-2 rounded-xl px-2 py-1 border shadow-sm transition-all duration-300 flex items-center justify-between overflow-hidden group pointer-events-auto cursor-pointer hover:shadow-md active:scale-[0.98] ${
                 evt.completed 
                 ? 'opacity-55 bg-zinc-100 border-zinc-200 line-through text-zinc-400 shadow-none' 
                 : getEventThemeClasses(evt.color)
             }`;
         } else {
-            card.className = `absolute left-2 right-2 rounded-xl p-3 border shadow-sm transition-all duration-300 flex flex-col justify-between overflow-hidden group pointer-events-auto ${
+            card.className = `absolute left-2 right-2 rounded-xl p-3 border shadow-sm transition-all duration-300 flex flex-col justify-between overflow-hidden group pointer-events-auto cursor-pointer hover:shadow-md active:scale-[0.98] ${
                 evt.completed 
                 ? 'opacity-55 bg-zinc-100 border-zinc-200 line-through text-zinc-400 shadow-none' 
                 : getEventThemeClasses(evt.color)
@@ -1375,6 +1472,9 @@ function renderEvents() {
         
         card.style.top = `${topPx}px`;
         card.style.height = `${heightPx}px`;
+        
+        // Direct click action to edit
+        card.onclick = (e) => openEditModal(evt.id, e);
 
         const mins = getDurationMinutes(evt.start, evt.end);
         let ptsHelper = "";
